@@ -27,11 +27,14 @@ public struct MiddlePoint
 public struct InertiaPoint
 {
     public Vector3 point;
-    public Vector3 velocity;
-    public InertiaPoint(Vector3 point, Vector3 velocity)
+    public Vector3 previousPoint;
+    public bool fixedPoint;
+
+    public InertiaPoint(Vector3 point, Vector3 previousPoint, bool fixedPoint)
     {
         this.point = point;
-        this.velocity = velocity;
+        this.previousPoint = previousPoint;
+        this.fixedPoint = fixedPoint;
     }
 }
 

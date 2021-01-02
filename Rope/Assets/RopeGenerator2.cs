@@ -5,6 +5,8 @@ using UnityEngine;
 public class RopeGenerator2 : MonoBehaviour
 {
     [Header("Rope Settings")]
+    public float ropeGravity = 4;
+    public float ropeAirFriction = 0.97f;
     public int maxPointsInSegment = 100;
     public float cornerAngleTrehsold = 10;
     public float cornerDistanceTrehsold = 0.1f;
@@ -16,24 +18,31 @@ public class RopeGenerator2 : MonoBehaviour
     public bool canStrech = true;
     public LayerMask ropeLayers;
     public Material ropeMaterial;
-    public float ropeGravity = 15;
-    public float dampening;
 
     [Header("Results")]
     public List<Segment> segments;
-    LineRenderer lineRenderer;
-    List<Vector3> allPoints = new List<Vector3>();
     public float ropeTension;
-    public float currentLenghtOfRope;
     public float currentLenghtOfSegments;
-    float timesincelastReduce;
+    public float currentGeneralLength;
     public float targetLength;
+    List<Vector3> allPoints = new List<Vector3>();
+
+    [Header("Components")]
+    LineRenderer lineRenderer;
     Coroutine updateCorners;
+    float timesincelastReduce;
     
     [Header("DEBUG OPTIONS")]
     public bool showRopeKinematicLines;
     public bool showCornerVectors;
+
+#region Initialization
     void Start()
+    {
+        GenerateComponents();
+    }
+
+    void GenerateComponents()
     {
         lineRenderer = GetComponent<LineRenderer>();
         if(lineRenderer == null)
@@ -42,24 +51,22 @@ public class RopeGenerator2 : MonoBehaviour
         ropeLayers = LayerMask.GetMask("Default");
         lineRenderer.material = ropeMaterial;
     }
+#endregion
 
+#region Call Functions
     public void GenerateTwoPointRope(Vector3 startingPoint, Vector3 endingPoint, float distance)
     {
         targetLength = distance;       
-        //SetRopeTension();
         GetSegments(startingPoint, endingPoint);
+        GeneratePoints(segments);
+        VisualizeSegments(segments, endingPoint); 
         if(updateCorners == null)
             updateCorners = StartCoroutine(UpdateCorners());
-        GenerateBetweenPoints(segments);
-        VisualizeSegments(segments, endingPoint); 
     }
-    public void SetRopeTension()
-    {
-        ropeTension = currentLenghtOfSegments/currentLenghtOfRope;
-        ropeTension = Mathf.Clamp(ropeTension, 0, 1);
-    }
+
     public void GenerateRope(Vector3 startingPosition, Vector3 endingPosition, bool pinged, bool grabbed, float maxPossibleLenght)
     {
+        //NEEDS TO ME MODIFIED
         if(pinged)
         {
             //SetRopeTension();
@@ -78,9 +85,12 @@ public class RopeGenerator2 : MonoBehaviour
         GetSegments(startingPosition, endingPosition);
         if(updateCorners == null)
             updateCorners = StartCoroutine(UpdateCorners());
-        GenerateBetweenPoints(segments);
+        GeneratePoints(segments);
         VisualizeSegments(segments, endingPosition);        
     }
+#endregion
+
+#region  Specific Functions
     IEnumerator UpdateCorners()
     {
         yield return new WaitForFixedUpdate();
@@ -106,6 +116,8 @@ public class RopeGenerator2 : MonoBehaviour
         }
     }
     
+#endregion
+
     void GetSegments(Vector3 startingPosition, Vector3 endingPosition)
     {
         if(segments.Count <= 0)
@@ -122,52 +134,55 @@ public class RopeGenerator2 : MonoBehaviour
             for(int i = 0; i < segments.Count; i++)
             {
                 List<MiddlePoint> middlesPoints = segments[i].middlePoints;
-                List<InertiaPoint> inbetweens = segments[i].inBetween;
                 Edge startingPoint = segments[i].startingEdge;
-                Edge endingPoint = segments[i].endingEdge;
-                if(startingPoint.realPosition != null)
-                    startingPoint.point = startingPoint.realPosition.position;
-                int lastPoint = 0;
-                int initialX = -1;
-                if(middlesPoints.Count > 0)
-                {
-                    for(int x = 0; x <= middlesPoints.Count; x++)
-                    {
-                        int currentPoint;
-                        Segment middleSegment = new Segment();
-                        if(x < middlesPoints.Count)
-                            currentPoint = middlesPoints[x].i;
-                        else
-                            currentPoint = inbetweens.Count-1;
-
-                        if(initialX+1 <= 0)
-                            middleSegment.startingEdge = startingPoint;
-                        else
-                            middleSegment.startingEdge = middlesPoints[initialX].edge;
-                        
-                        if(x == middlesPoints.Count)
-                            middleSegment.endingEdge = endingPoint;
-                        else
-                            middleSegment.endingEdge =  middlesPoints[x].edge;
-                        
-                        if(currentPoint-lastPoint > 0)
-                            middleSegment.inBetween.AddRange(inbetweens.GetRange(lastPoint, currentPoint-lastPoint));
-                        lastPoint = currentPoint;
-                        if(Vector3.Distance(middleSegment.startingEdge.point, middleSegment.endingEdge.point) > 0.1f) 
-                        {
-                            if(x < middlesPoints.Count)                            
-                                middleSegment.endingEdge.GeneratePoint();                            
-                            temporalSegments.Add(middleSegment);
-                            initialX = x;
-                        }
-                    }
-                }
+                if(middlesPoints.Count > 0)                
+                    temporalSegments.AddRange(AddMiddleSegments(segments[i], middlesPoints));
                 else
                     temporalSegments.Add(segments[i]);
                 
             }
             segments = temporalSegments;
         }
+    }
+    List<Segment> AddMiddleSegments(Segment segment, List<MiddlePoint> middlesPoints)
+    {
+        int lastPoint = 0;
+        int initialX = -1;
+        List<InertiaPoint> inbetweens = segment.inBetween;
+        Edge startingPoint = segment.startingEdge;
+        Edge endingPoint = segment.endingEdge;
+        List<Segment> temp = new List<Segment>();
+        for(int x = 0; x <= middlesPoints.Count; x++)
+        {
+            int currentPoint;
+            Segment middleSegment = new Segment();
+            if(x < middlesPoints.Count)
+                currentPoint = middlesPoints[x].i;
+            else
+                currentPoint = inbetweens.Count-1;
+
+            if(initialX+1 <= 0)
+                middleSegment.startingEdge = startingPoint;
+            else
+                middleSegment.startingEdge = middlesPoints[initialX].edge;
+            
+            if(x == middlesPoints.Count)
+                middleSegment.endingEdge = endingPoint;
+            else
+                middleSegment.endingEdge =  middlesPoints[x].edge;
+            
+            if(currentPoint-lastPoint > 0)
+                middleSegment.inBetween.AddRange(inbetweens.GetRange(lastPoint, currentPoint-lastPoint));
+            lastPoint = currentPoint;
+            if(Vector3.Distance(middleSegment.startingEdge.point, middleSegment.endingEdge.point) > 0.1f) 
+            {
+                if(x < middlesPoints.Count)                            
+                    middleSegment.endingEdge.GeneratePoint();                            
+                temp.Add(middleSegment);
+                initialX = x;
+            }
+        }
+        return temp;
     }
     void MoveCorners()
     {
@@ -179,20 +194,18 @@ public class RopeGenerator2 : MonoBehaviour
             Segment beforeSegment = segments[i-1];
             Edge startingEdge = currrentSegment.startingEdge;
             Edge endingEdge = currrentSegment.endingEdge;
-            Vector3 pointBefore = currrentSegment.startingEdge.realPosition.position;
+            Vector3 pointBefore = currrentSegment.startingEdge.point;
+            pointBefore += (currrentSegment.startingEdge.previousPoint-pointBefore)*ropeAirFriction;
+            currrentSegment.startingEdge.previousPoint = pointBefore;
+
             if(currrentSegment.inBetween.Count>0)
             {
                 starting = currrentSegment.inBetween[0].point;
                 if(Vector3.Distance(starting, startingEdge.point) < distanceBetweenPoints/2 && currrentSegment.inBetween.Count > 1)
                     starting = currrentSegment.inBetween[1].point;
             }           
-            else
-            {
-                if(currrentSegment.endingEdge.realPosition != null)
-                    starting = currrentSegment.endingEdge.realPosition.position;
-                else
-                    starting = currrentSegment.endingEdge.point;
-            }   
+            else            
+                starting = currrentSegment.endingEdge.point;            
             
             if(beforeSegment.inBetween.Count>0)            
             {
@@ -200,13 +213,9 @@ public class RopeGenerator2 : MonoBehaviour
                 if(Vector3.Distance(ending, startingEdge.point) < distanceBetweenPoints/2 && beforeSegment.inBetween.Count > 1)
                     ending = beforeSegment.inBetween[beforeSegment.inBetween.Count-2].point;   
             }       
-            else
-            {
-                if(beforeSegment.startingEdge.realPosition != null)
-                    ending = beforeSegment.startingEdge.realPosition.position;
-                else
-                    ending = beforeSegment.startingEdge.point;
-            }
+            else            
+                ending = beforeSegment.startingEdge.point;
+
             RaycastHit hit1;
             RaycastHit hit2;
             float angle1 = Vector3.Dot((starting-pointBefore).normalized, -startingEdge.normal2);
@@ -218,14 +227,13 @@ public class RopeGenerator2 : MonoBehaviour
             Vector3 relocatedStart = pointBefore + projected1;
             Vector3 relocatedEnd = pointBefore + projected2;
             Vector3 middle = (starting+ending)/2;
-            bool collided = false; 
             
             if(showCornerVectors)
             {
                 Debug.DrawRay(relocatedStart, -startingEdge.normal1*ropeRadious*2, Color.cyan);
                 Debug.DrawRay(relocatedEnd, -startingEdge.normal2*ropeRadious*2, Color.blue);
             }
-                            
+            bool collided = false;  
             if(Physics.Raycast(relocatedEnd, -startingEdge.normal2,out hit2, ropeRadious*2, ropeLayers) && Physics.Raycast(relocatedStart, -startingEdge.normal1,out hit1, ropeRadious*2, ropeLayers))
             {
                 if(hit1.normal != -hit2.normal)
@@ -236,7 +244,7 @@ public class RopeGenerator2 : MonoBehaviour
                     middle = pointplane1.ClosestPointOnPlane(middle);
                     middle = pointplane2.ClosestPointOnPlane(middle);
                     middle += (startingEdge.normal1+startingEdge.normal2) * ropeRadious;
-                    startingEdge.realPosition.position = (middle+pointBefore)/2;
+                    startingEdge.point = (middle+pointBefore)/2;
                     startingEdge.normal1 = hit1.normal;
                     startingEdge.normal2 = hit2.normal;
                 }
@@ -249,8 +257,8 @@ public class RopeGenerator2 : MonoBehaviour
             dir2 = Vector3.ProjectOnPlane(dir2,up);
             float Angle = Vector3.SignedAngle(dir1, dir2, up);
             float distance = (startingEdge.point - endingEdge.point).magnitude;
-            float moveDistance = (startingEdge.point.y-startingEdge.realPosition.position.y);
-            if(Angle < cornerAngleTrehsold | startingEdge.normal1 == -startingEdge.normal2 || distance < ropeRadious/2 || !collided ||moveDistance > ropeGravity*Time.deltaTime) 
+            float moveDistance = (startingEdge.point.y-startingEdge.point.y);
+            /*if(Angle < cornerAngleTrehsold | startingEdge.normal1 == -startingEdge.normal2 || distance < ropeRadious/2 || !collided || moveDistance > ropeGravity*Time.deltaTime) 
             {              
                 Debug.LogError("yup");
                 beforeSegment.inBetween.Add(currrentSegment.startingEdge.inertiaPoint);
@@ -260,7 +268,7 @@ public class RopeGenerator2 : MonoBehaviour
                 segments.RemoveAt(i);
                 i-=1;
                 continue;
-            }
+            }*/
         }
     }
     void VisualizeSegments(List<Segment> segments, Vector3 endingPoint)
@@ -317,7 +325,7 @@ public class RopeGenerator2 : MonoBehaviour
     }
     bool TwoWayRaycast(Vector3 startPoint, Vector3 direction1, Vector3 endPoint, Vector3 direction2, out RaycastHit hit1, out RaycastHit hit2, float magnitude)
     {
-        if(Physics.Raycast(startPoint, direction1, out hit1, magnitude, ropeLayers) && Physics.Raycast(endPoint, direction2, out hit2, magnitude, ropeLayers))  
+        if(Physics.Raycast(startPoint,direction1, out hit1, magnitude, ropeLayers) && Physics.Raycast(endPoint, direction2, out hit2, magnitude, ropeLayers))  
             return true;
         else
         {
@@ -326,134 +334,173 @@ public class RopeGenerator2 : MonoBehaviour
             return false;
         }
     }
-    void GenerateBetweenPoints(List<Segment> currentSegments)
+    
+    void GeneratePoints(List<Segment> currentSegments)
     {
-        currentLenghtOfRope = GetLength();
-        currentLenghtOfSegments = GetLengthSegments();
         currentSegments.Reverse();
+        currentLenghtOfSegments = 0;
+        currentGeneralLength = GetGeneralLength();
         float theoricEndLength = currentSegments[currentSegments.Count-1].segmentLenght;
         float lengthFound = 0;
         for(int i = 0; i< currentSegments.Count; i++)
         {
-            lengthFound += GeneratePoint(segments[i], lengthFound, i== currentSegments.Count-1, theoricEndLength);        
+            lengthFound += GeneratePoint(segments[i], lengthFound, i == currentSegments.Count-1, theoricEndLength);        
         }
         currentSegments.Reverse();
     }
-    float GetLength()
+    float GetGeneralLength()
     {
-        float currentLenghtOfRope = 0;
-        for(int i = 1; i< allPoints.Count-1; i++) //Aquest -1 es pot treure segurament
+        float temp = 0;
+        for(int i = 2; i < allPoints.Count; i++)
         {
-            currentLenghtOfRope += (allPoints[i]-allPoints[i-1]).magnitude;
+            temp += (allPoints[i]-allPoints[i-1]).magnitude;
         }
-        return currentLenghtOfRope;
+        return temp;
     }
-    float GetLengthSegments()
+    float CalculateSegmentLength(Segment segment)
     {
-        float currentLenghtOfSegments = 0;
-        for(int i = 0; i < segments.Count; i++)
+        float length = (segment.startingEdge.point-segment.endingEdge.point).magnitude;
+        segment.segmentLenght = length;
+        currentLenghtOfSegments += length;
+        return length;
+    }
+    InertiaPoint reduceStartingPoint(Segment segment, float currentLengthFound, ref float segmentLenght)
+    {
+        float tempSegLen = (targetLength-currentLengthFound);
+        Vector3 startingPoint = segment.startingEdge.point;
+        Vector3 endingPoint = segment.endingEdge.point;
+        Vector3 segmentDirection = (endingPoint-startingPoint).normalized;
+
+        ropeTension = (segmentLenght-tempSegLen+distanceBetweenPoints)/(distanceBetweenPoints);
+        ropeTension = Mathf.Clamp(ropeTension,0,1);
+        
+        if(segmentLenght+currentLengthFound >= targetLength)
         {
-            float distance = (segments[i].startingEdge.point-segments[i].endingEdge.point).magnitude;
-            segments[i].segmentLenght = distance;
-            currentLenghtOfSegments += distance;
+            if(ropeTension >= 1)
+                startingPoint = endingPoint-segmentDirection*tempSegLen; //Podriem dir que ha petat la corda o algo per l'estil
         }
-        return currentLenghtOfSegments;
+        segmentLenght = targetLength-currentLengthFound;
+        return new InertiaPoint(startingPoint, Vector3.zero, true);
+    }
+
+    int GetPointAmount(float segmentLenght, out float extra)
+    {
+        int pointAmount; 
+        pointAmount = Mathf.FloorToInt(segmentLenght/distanceBetweenPoints);
+        //pointAmount += Mathf.FloorToInt(targetLength-segmentLenght/distanceBetweenPoints);
+        extra = segmentLenght-(pointAmount)*distanceBetweenPoints;
+        if(extra > 0)
+            pointAmount += 1;
+        Debug.Log(pointAmount + " vs " + extra);
+        return pointAmount;
     }
     float GeneratePoint(Segment segment, float currentLengthFound, bool lastOne, float theoricEndLength)
     {   
-        InertiaPoint startingPoint = segment.startingEdge.inertiaPoint;
+        float segmentLenght = CalculateSegmentLength(segment);
         InertiaPoint endingPoint = segment.endingEdge.inertiaPoint;
-        float segmentLenght = segment.segmentLenght;
-        InertiaPoint fakeStartingPoint = segment.startingEdge.inertiaPoint;
-        Vector3 segmentDirection = (endingPoint.point-startingPoint.point).normalized;
-        if(lastOne)
-        {
-            float tempSegLen = (targetLength-currentLengthFound);
-            ropeTension = (segmentLenght-tempSegLen+distanceBetweenPoints)/(distanceBetweenPoints);
-            ropeTension = Mathf.Clamp(ropeTension,0,1);
-            if(segmentLenght+currentLengthFound >= targetLength)
-            {
-                if(ropeTension >= 1)
-                    fakeStartingPoint.point = endingPoint.point-segmentDirection*tempSegLen; //Podriem dir que ha petat la corda o algo per l'estil
-            }
-            segmentLenght = targetLength-currentLengthFound;
-        }
-        int currentAmount = segment.inBetween.Count;
-        int pointAmount = currentAmount; 
+        InertiaPoint startingPoint = segment.startingEdge.inertiaPoint;
+        if(lastOne)        
+            startingPoint = reduceStartingPoint(segment, currentLengthFound, ref segmentLenght);        
+
         float extra = -1;
-        pointAmount = Mathf.FloorToInt(segmentLenght/distanceBetweenPoints);
-        //pointAmount += Mathf.FloorToInt(targetLength-segmentLenght/distanceBetweenPoints);
+        int pointAmount = GetPointAmount(segmentLenght, out extra);      
 
-        extra = segmentLenght-(pointAmount)*distanceBetweenPoints;
-        if(extra <= 0)
-            pointAmount -= 1;
-        /*
-        if(!lastOne)             
-        {
-            pointAmount = Mathf.FloorToInt(((targetLength-theoricEndLength)*segment.realLength/currentLenghtOfRope)/distanceBetweenPoints)-1;
-            if(pointAmount*distanceBetweenPoints <= segmentLenght)            
-                pointAmount = Mathf.FloorToInt(segment.segmentLenght/distanceBetweenPoints)-1;   
-            //extra = segmentLenght-(pointAmount)*distanceBetweenPoints;
-            //if(extra > 0)
-               //pointAmount += 1;     
-        }    
-        else      
-        {
-            pointAmount = Mathf.FloorToInt((targetLength-currentFound)/distanceBetweenPoints);  
-            extra = segmentLenght-(pointAmount)*distanceBetweenPoints;
-            if(extra > 0)
-                pointAmount += 1;
-            if(ropeTension > 0.99f)
-                pointAmount -= 1;
-        } */
-
-        pointAmount = Mathf.Clamp(pointAmount, 0, maxPointsInSegment);
-        if(segment.inBetween.Count < pointAmount)
-        {         
-            InertiaPoint tempIn = new InertiaPoint();
-            if(segment.inBetween.Count>0)
-            {
-                if((endingPoint.point-segment.inBetween[segment.inBetween.Count-1].point).magnitude > distanceBetweenPoints-0.1f)     
-                {         
-                    tempIn.point = endingPoint.point+(fakeStartingPoint.point-segment.inBetween[0].point).normalized*distanceBetweenPoints/2;
-                    segment.inBetween.Add(tempIn);
-                }
-            }
-            else    
-            {            
-                tempIn.point = fakeStartingPoint.point+(endingPoint.point-fakeStartingPoint.point).normalized*distanceBetweenPoints;
-                segment.inBetween.Add(tempIn);
-            }
-        }
-        else 
-        if(segment.inBetween.Count >= pointAmount)      
-        {   
-            segment.inBetween.RemoveRange(0, segment.inBetween.Count-pointAmount);   
-        }
+        ModifyAmountOfPoints(segment, pointAmount, startingPoint.point);
 
         List<InertiaPoint> temporalPoints = new List<InertiaPoint>(segment.inBetween);      
-        temporalPoints.Insert(0, fakeStartingPoint);
+        temporalPoints.Insert(0, startingPoint);
         temporalPoints.Add(endingPoint);
-        float tens = (Mathf.Clamp(ropeTension,0.95f,1f)*20-19);
-        Debug.DrawRay(temporalPoints[0].point, Vector3.up, Color.cyan);
-        Debug.DrawRay(temporalPoints[temporalPoints.Count-1].point, Vector3.up, Color.magenta);
-        ApplyTension(segment, temporalPoints);
-        StartToEnd(temporalPoints, extra);
-        
-        temporalPoints.Insert(0, fakeStartingPoint);
-        segment.inBetween.Insert(0, fakeStartingPoint);
-        
-        segment.middlePoints = EndToStart(temporalPoints, extra);
-        
-        float realLength = 0;
+                
+        ApplyVelocities(segment, temporalPoints);
+        for(int i = 0; i < 10; i++)
+        {
+            SimpleTwoWay(temporalPoints, extra);
+        }
+        OneWayDetecion(temporalPoints, out segment.middlePoints, extra);
+
+        //StartToEnd(temporalPoints, extra);   
+        //EndToStart(temporalPoints, extra, out segment.middlePoints);
+
         temporalPoints.RemoveAt(0);
         temporalPoints.RemoveAt(temporalPoints.Count-1);
 
+        return AssingPoints(temporalPoints, segment, lastOne);
+    }
+    
+    void SimpleTwoWay(List<InertiaPoint> positionsTemp, float extra)
+    {
+        for(int i = 1; i< positionsTemp.Count; i++)
+        {
+            if(positionsTemp[i].fixedPoint)
+                continue;
+            Vector3 trans1 = positionsTemp[i].point;
+            Vector3 trans2 = positionsTemp[i-1].point;                 
+            float distanceBetween = Vector3.Distance(trans2,trans1);
+            float tempDistance = distanceBetweenPoints;
+            Vector3 directionForward = (trans2-trans1).normalized;
+            float distance = Vector3.Distance(trans2,trans1);
+            if(i == 1 && extra > 0)
+                tempDistance *= extra;
+            if(distance>tempDistance)
+            {
+                trans1 += (distance-tempDistance)*(directionForward).normalized/2;  
+                trans2 -= (distance-tempDistance)*(directionForward).normalized/2;  
+            }
+            InertiaPoint current = positionsTemp[i];
+            current.point = trans1;
+            positionsTemp[i] = current;        
+            InertiaPoint current2 = positionsTemp[i-1];
+            current2.point = trans2;
+            positionsTemp[i-1] = current2;      
+        }
+    }
+    void OneWayDetecion(List<InertiaPoint> temporalPoints, out List<MiddlePoint> middlePoints, float extra)
+    {
+        List<MiddlePoint> middles = new List<MiddlePoint>();
+        for(int i = 1; i<temporalPoints.Count; i++)
+        {
+            if(temporalPoints[i].fixedPoint)
+                continue;
+            Vector3 trans1 = temporalPoints[i].point;
+            Vector3 trans2 = temporalPoints[i-1].point;                 
+            float tempDistance = distanceBetweenPoints;  
+            float distance = (trans1-trans2).magnitude;          
+            if(i == temporalPoints.Count-1 && extra > 0)
+                tempDistance *= extra;
+            Edge temp = CollisionDetectionBetweenPoints(trans1, trans2);
+            if(temp != null)
+            {
+                MiddlePoint middle = new MiddlePoint(temp, i);
+                middles.Add(middle);  
+            }     
+
+            if(distance > tempDistance)     
+            {       
+                Debug.DrawRay(trans1, Vector3.up*2);
+                trans1 += (trans1-trans2).normalized*(distance-tempDistance);   
+            }         
+
+            if(showRopeKinematicLines)
+            {
+                Debug.DrawLine(trans1,trans2, Color.magenta);
+                Debug.DrawRay(trans1,Vector3.up, Color.cyan);     
+            }
+            InertiaPoint inertia = temporalPoints[i];
+            inertia.point = trans1;
+            temporalPoints[i] = inertia;
+        }
+        middlePoints = middles;
+    }
+    float AssingPoints(List<InertiaPoint> temporalPoints, Segment segment, bool lastOne)
+    {
+        float realLength = 0;
+        Vector3 startingPoint = segment.startingEdge.point;
+        Vector3 endingPoint = segment.endingEdge.point;
         if(temporalPoints.Count > 0)
         {
             if(!lastOne)
-                realLength += (temporalPoints[0].point-startingPoint.point).magnitude;
-            realLength += (temporalPoints[temporalPoints.Count-1].point-endingPoint.point).magnitude;
+                realLength += (temporalPoints[0].point-startingPoint).magnitude;
+            realLength += (temporalPoints[temporalPoints.Count-1].point-endingPoint).magnitude;
             for(int i = 0; i< temporalPoints.Count;i++)
             {
                 if(i > 0)
@@ -462,51 +509,92 @@ public class RopeGenerator2 : MonoBehaviour
             }
         }
         else
-            realLength += (startingPoint.point-endingPoint.point).magnitude;
+            realLength += (startingPoint-endingPoint).magnitude;
         segment.realLength = realLength;
         return realLength;
     }
-    void ApplyTension(Segment segment, List<InertiaPoint> pointsTemp)
+    void ModifyAmountOfPoints(Segment segment, int pointAmount, Vector3 fakeStartingPoint)
     {
-        for(int i = 1; i< pointsTemp.Count-1; i++)
-        {
-            Vector3 point = segment.startingEdge.point;
-            Vector3 trans1 = pointsTemp[i].point;
-            Vector3 directionPlane = segment.startingEdge.point-segment.endingEdge.point;
-            Plane plane1 = new Plane(directionPlane, trans1);
-            Vector3 pointInPlaneClose = plane1.ClosestPointOnPlane(segment.startingEdge.point);
-            Vector3 gravityVector = Vector3.down*ropeGravity*Time.deltaTime;  
-            Vector3 velocityVector = pointsTemp[i].velocity*Time.deltaTime*dampening;
-            Vector3 tensionPoint = Vector3.Lerp(trans1+gravityVector+velocityVector, pointInPlaneClose, ropeTension);
-            directionPlane = tensionPoint-trans1;
-            RaycastHit hit;
-            Collider[] collisions = Physics.OverlapSphere(tensionPoint, ropeRadious, ropeLayers);
-            if(Physics.Raycast(trans1, directionPlane, out hit, directionPlane.magnitude+ropeRadious,ropeLayers))            
-                trans1 = hit.point-directionPlane.normalized*ropeRadious;            
-            else if(collisions.Length <= 0)            
-                trans1 = tensionPoint;        
-            pointsTemp[i] = new InertiaPoint(trans1, (trans1-pointsTemp[i].point)/Time.deltaTime);
-
-            /*
-            Vector3 trans1 = pointsTemp[i];
-            float gravityMult = 0;
-            if(i >= 1 && i <= pointsTemp.Count-2)
-                gravityMult = (pointsTemp[i]-currentPoints[i-1]).magnitude;
-            gravityMult = Mathf.Clamp(1-gravityMult,0, 1) * tens;
-            Vector3 gravity = Vector3.down*ropeGravity*Time.deltaTime*(1);
-            Collider[] collisions = Physics.OverlapSphere(trans1, 0.21f, ropeLayers);
-            if(!Physics.Raycast(trans1, Vector3.down, gravity.magnitude*Time.deltaTime,ropeLayers) && collisions.Length <= 0)
+        pointAmount = Mathf.Clamp(pointAmount, 0, maxPointsInSegment);
+        Vector3 startingPoint = segment.startingEdge.point;
+        Vector3 endingPoint = segment.endingEdge.point;
+        if(segment.inBetween.Count < pointAmount)
+        {         
+            InertiaPoint tempIn = new InertiaPoint();
+            if(segment.inBetween.Count>0)
             {
-                trans1 += gravity;
-                pointsTemp[i] = trans1;
-            }*/
+                if((endingPoint-segment.inBetween[segment.inBetween.Count-1].point).magnitude > distanceBetweenPoints-0.1f)     
+                {         
+                    tempIn.point = startingPoint;
+                    tempIn.previousPoint = tempIn.point;
+                    segment.inBetween.Insert(0, tempIn);
+                }
+            }
+            else    
+            {            
+                tempIn.point = endingPoint+(fakeStartingPoint-endingPoint).normalized*distanceBetweenPoints/2;
+                tempIn.previousPoint = tempIn.point;
+                segment.inBetween.Add(tempIn);
+            }
+        }
+        else 
+        if(segment.inBetween.Count >= pointAmount)      
+        {   
+            segment.inBetween.RemoveRange(0, segment.inBetween.Count-pointAmount);   
         }
     }
+    void ApplyVelocities(Segment segment, List<InertiaPoint> pointsTemp)
+    {
+        Vector3 startingPoint;
+        Vector3 currentPoint;
+        Vector3 lastPoint;
+        Vector3 directionPlane;
+        Plane plane;
+        Vector3 gravityVector = Vector3.down*ropeGravity*Time.fixedDeltaTime;
+        InertiaPoint currentInertia;
+        RaycastHit hit;
+        Collider[] onPointCollisions;
+
+        for(int i = 1; i< pointsTemp.Count-1; i++)
+        {
+            if(pointsTemp[i].fixedPoint)
+                continue;
+            
+            currentInertia = pointsTemp[i];
+            startingPoint = segment.startingEdge.point;
+            currentPoint = currentInertia.point;
+            
+            lastPoint = currentInertia.previousPoint;
+                        Debug.DrawLine(currentPoint, lastPoint, Color.red);
+
+            currentInertia.previousPoint = currentPoint;
+            directionPlane = segment.startingEdge.point-segment.endingEdge.point;
+            plane = new Plane(directionPlane, currentPoint);
+            Vector3 velocityVector = (currentPoint-lastPoint)*ropeAirFriction;
+            Debug.DrawRay(currentPoint, velocityVector);
+            Vector3 pointInPlaneClose = plane.ClosestPointOnPlane(segment.startingEdge.point)+velocityVector*(1-ropeTension);
+            Vector3 tensionPoint = Vector3.Lerp(currentPoint+gravityVector+velocityVector, pointInPlaneClose, ropeTension);
+            directionPlane = tensionPoint-currentPoint;
+            //Problema amb la tensio, estic modificant el punt ja modificat, cosa que dona a l'extranya velocitat de tensio
+            //que apareix ara mateix            
+            onPointCollisions = Physics.OverlapSphere(tensionPoint, ropeRadious, ropeLayers);            
+            if(Physics.SphereCast(currentPoint, ropeRadious-ropeRadious*1.2f, directionPlane, out hit, directionPlane.magnitude+ropeRadious,ropeLayers))            
+                currentPoint = hit.point-directionPlane.normalized*ropeRadious;            
+            else if(onPointCollisions.Length <= 0)            
+                currentPoint = tensionPoint;   
+
+            currentInertia.point = currentPoint;
+            pointsTemp[i] = currentInertia;
+        }
+    }
+    
     void StartToEnd(List<InertiaPoint> positionsTemp, float extra)
     {
         int max = positionsTemp.Count;
         for(int i = 1; i<max-1; i++)
         {
+            if(positionsTemp[i].fixedPoint)
+                continue;
             Vector3 trans1 = positionsTemp[i].point;
             Vector3 trans2 = positionsTemp[i-1].point;
             float between = Vector3.Distance(trans2,trans1);
@@ -527,38 +615,29 @@ public class RopeGenerator2 : MonoBehaviour
                 Debug.DrawLine(trans1,trans2, Color.black);
                 Debug.DrawRay(trans1,Vector3.up*1.2f, Color.red);
             }
-            positionsTemp[i] = new InertiaPoint(trans1, positionsTemp[i].velocity+(trans1-positionsTemp[i].point)/Time.deltaTime);         
+
+            InertiaPoint current = positionsTemp[i];
+            current.point = trans1;
+            positionsTemp[i] = current;         
         }
     }
-    List<MiddlePoint> EndToStart(List<InertiaPoint> positionsTemp, float extra)
+    void EndToStart(List<InertiaPoint> positionsTemp, float extra, out List<MiddlePoint> middlePoints)
     {        
         positionsTemp.Reverse();
         List<MiddlePoint> middles = new List<MiddlePoint>();
         for(int i = 1; i<positionsTemp.Count; i++)
         {
+            if(positionsTemp[i].fixedPoint)
+                continue;
             Vector3 trans1 = positionsTemp[i].point;
             Vector3 trans2 = positionsTemp[i-1].point;                 
-            Edge middlePoint = CollisionDetectionBetweenPoints(ref trans1, trans2);
-            float distanceBetween = Vector3.Distance(trans2,trans1);
-            float minDistance = distanceBetweenPoints;
             float tempDistance = distanceBetweenPoints;
             if(i == positionsTemp.Count-1 && extra > 0)
                 tempDistance *= extra;
-            //Vector3 directionForward = trans2-trans1;
+            
+            trans1 += MiddleModifier(ref middles, positionsTemp.Count-1-i, trans1, trans2);
+            
             Vector3 directionForward = (trans2-trans1).normalized;
-            if(middlePoint != null)
-            {
-                middles.Add(new MiddlePoint(middlePoint, positionsTemp.Count-1-i));
-                distanceBetween = Vector3.Distance(trans1,middlePoint.point);
-                minDistance -= Vector3.Distance(middlePoint.point,trans2);      
-                if(canStrech)
-                {
-                    if(distanceBetween>minDistance)
-                        trans1 += (distanceBetween-minDistance)*(middlePoint.point-trans1).normalized;  
-                }
-                else
-                    trans1 += (distanceBetween-minDistance)*(middlePoint.point-trans1).normalized;
-            }
             float distance = Vector3.Distance(trans2,trans1);
             if(canStrech)
             {
@@ -573,13 +652,35 @@ public class RopeGenerator2 : MonoBehaviour
                 Debug.DrawLine(trans1,trans2, Color.magenta);
                 Debug.DrawRay(trans1,Vector3.up, Color.cyan);     
             }
-            positionsTemp[i] = new InertiaPoint(trans1,positionsTemp[i].velocity+(trans1-positionsTemp[i].point)/Time.deltaTime);  
+            InertiaPoint current = positionsTemp[i];
+            current.point = trans1;
+            positionsTemp[i] = current;        
         }
         positionsTemp.Reverse();
         middles.Reverse();
-        return middles;
+        middlePoints = middles;
     }
-    Edge CollisionDetectionBetweenPoints(ref Vector3 forwardPoint, Vector3 backPoint)
+    Vector3 MiddleModifier(ref List<MiddlePoint> middles, int insert, Vector3 trans1, Vector3 trans2)
+    {
+        Edge middlePoint = CollisionDetectionBetweenPoints(/*ref*/ trans1, trans2);
+        float distanceBetween;
+        float minDistance = distanceBetweenPoints;
+        if(middlePoint != null)
+        {
+            middles.Add(new MiddlePoint(middlePoint, insert));
+            distanceBetween = Vector3.Distance(trans1,middlePoint.point);
+            minDistance -= Vector3.Distance(middlePoint.point,trans2);      
+            if(canStrech)
+            {
+                if(distanceBetween>minDistance)
+                    return (distanceBetween-minDistance)*(middlePoint.point-trans1).normalized;  
+            }
+            else
+                return (distanceBetween-minDistance)*(middlePoint.point-trans1).normalized;
+        }
+        return Vector3.zero;
+    }
+    Edge CollisionDetectionBetweenPoints(Vector3 forwardPoint, Vector3 backPoint)
     {
         RaycastHit hit1;
         RaycastHit hit2;
@@ -600,6 +701,8 @@ public class RopeGenerator2 : MonoBehaviour
                 return new Edge(middle, hit1.normal, hit2.normal, hit1.transform);       
             }          
         }
+        return null;
+        /* No necessari pel nou metode
         if(Physics.Raycast(backPoint, directionVector, out hit1, directionVector.magnitude, ropeLayers))
         {
             Plane plane = new Plane(hit1.normal, hit1.point+hit1.normal*ropeRadious);
@@ -607,13 +710,6 @@ public class RopeGenerator2 : MonoBehaviour
             return null;
         }
         else
-            return null;
-    }
-    Vector3 randomVector3(Vector3 min, Vector3 max, float detail)
-    {
-        float x = Random.Range(min.x, max.x);
-        float y = Random.Range(min.y, max.y);
-        float z = Random.Range(min.z, max.z);
-        return new Vector3(x,y,z)/detail;
+            return null;*/
     }
 }
