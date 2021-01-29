@@ -15,6 +15,8 @@ public class RopeGenerator2 : MonoBehaviour
     public float speedGrab = 0.5f;
     public float distanceBetweenPoints = 1;
     public float lineRendererSmoothness = 10;
+    public float inertiaCooldown = 1;
+    private float currentCooldown;
     public bool canStrech = true;
     public LayerMask ropeLayers;
     public Material ropeMaterial;
@@ -146,7 +148,7 @@ public class RopeGenerator2 : MonoBehaviour
     }
     List<Segment> AddMiddleSegments(Segment segment, List<MiddlePoint> middlesPoints)
     {
-        int lastPoint = 0;
+        int lastUsedIndex = 0;
         int initialX = -1;
         List<InertiaPoint> inbetweens = segment.inBetween;
         Edge startingPoint = segment.startingEdge;
@@ -154,14 +156,14 @@ public class RopeGenerator2 : MonoBehaviour
         List<Segment> temp = new List<Segment>();
         for(int x = 0; x <= middlesPoints.Count; x++)
         {
-            int currentPoint;
+            int currentFocusIndex;
             Segment middleSegment = new Segment();
             if(x < middlesPoints.Count)
-                currentPoint = middlesPoints[x].i;
+                currentFocusIndex = middlesPoints[x].i-1;
             else
-                currentPoint = inbetweens.Count-1;
+                currentFocusIndex = inbetweens.Count;
 
-            if(initialX+1 <= 0)
+            if(initialX == -1)
                 middleSegment.startingEdge = startingPoint;
             else
                 middleSegment.startingEdge = middlesPoints[initialX].edge;
@@ -171,9 +173,15 @@ public class RopeGenerator2 : MonoBehaviour
             else
                 middleSegment.endingEdge =  middlesPoints[x].edge;
             
-            if(currentPoint-lastPoint > 0)
-                middleSegment.inBetween.AddRange(inbetweens.GetRange(lastPoint, currentPoint-lastPoint));
-            lastPoint = currentPoint;
+            if(currentFocusIndex-lastUsedIndex > 0)            
+            {
+                middleSegment.inBetween.AddRange(inbetweens.GetRange(lastUsedIndex, currentFocusIndex-lastUsedIndex));
+                if(lastUsedIndex != -1)
+                    middleSegment.inBetween.Insert(0,middleSegment.startingEdge.inertiaPoint);
+                currentCooldown = inertiaCooldown;  
+            }  
+            
+            lastUsedIndex = currentFocusIndex;
             if(Vector3.Distance(middleSegment.startingEdge.point, middleSegment.endingEdge.point) > 0.1f) 
             {
                 if(x < middlesPoints.Count)                            
@@ -258,9 +266,8 @@ public class RopeGenerator2 : MonoBehaviour
             float Angle = Vector3.SignedAngle(dir1, dir2, up);
             float distance = (startingEdge.point - endingEdge.point).magnitude;
             float moveDistance = (startingEdge.point.y-startingEdge.point.y);
-            /*if(Angle < cornerAngleTrehsold | startingEdge.normal1 == -startingEdge.normal2 || distance < ropeRadious/2 || !collided || moveDistance > ropeGravity*Time.deltaTime) 
+            if(Angle > cornerAngleTrehsold | startingEdge.normal1 == -startingEdge.normal2 || distance < ropeRadious/2 || !collided || moveDistance > ropeGravity*Time.deltaTime) 
             {              
-                Debug.LogError("yup");
                 beforeSegment.inBetween.Add(currrentSegment.startingEdge.inertiaPoint);
                 beforeSegment.inBetween.AddRange(currrentSegment.inBetween);
                 beforeSegment.endingEdge.DestroyPoint();
@@ -268,7 +275,7 @@ public class RopeGenerator2 : MonoBehaviour
                 segments.RemoveAt(i);
                 i-=1;
                 continue;
-            }*/
+            }
         }
     }
     void VisualizeSegments(List<Segment> segments, Vector3 endingPoint)
@@ -340,6 +347,10 @@ public class RopeGenerator2 : MonoBehaviour
         currentSegments.Reverse();
         currentLenghtOfSegments = 0;
         currentGeneralLength = GetGeneralLength();
+        if(currentCooldown > 0)
+            currentCooldown -= Time.deltaTime;
+        else
+            currentCooldown = 0;
         float theoricEndLength = currentSegments[currentSegments.Count-1].segmentLenght;
         float lengthFound = 0;
         for(int i = 0; i< currentSegments.Count; i++)
@@ -351,6 +362,14 @@ public class RopeGenerator2 : MonoBehaviour
     float GetGeneralLength()
     {
         float temp = 0;
+        if(allPoints.Count > 2)
+        {
+            float starting = (allPoints[1]-allPoints[0]).magnitude;
+            if(starting > distanceBetweenPoints)
+                temp += distanceBetweenPoints;
+            else
+                temp += starting;
+        }
         for(int i = 2; i < allPoints.Count; i++)
         {
             temp += (allPoints[i]-allPoints[i-1]).magnitude;
@@ -371,7 +390,7 @@ public class RopeGenerator2 : MonoBehaviour
         Vector3 endingPoint = segment.endingEdge.point;
         Vector3 segmentDirection = (endingPoint-startingPoint).normalized;
 
-        ropeTension = (segmentLenght-tempSegLen+distanceBetweenPoints)/(distanceBetweenPoints);
+        ropeTension = (segmentLenght-tempSegLen)/(distanceBetweenPoints);
         ropeTension = Mathf.Clamp(ropeTension,0,1);
         
         if(segmentLenght+currentLengthFound >= targetLength)
@@ -389,9 +408,8 @@ public class RopeGenerator2 : MonoBehaviour
         pointAmount = Mathf.FloorToInt(segmentLenght/distanceBetweenPoints);
         //pointAmount += Mathf.FloorToInt(targetLength-segmentLenght/distanceBetweenPoints);
         extra = segmentLenght-(pointAmount)*distanceBetweenPoints;
-        if(extra > 0)
-            pointAmount += 1;
-        Debug.Log(pointAmount + " vs " + extra);
+        if(extra <= 0)
+            pointAmount -= 1;
         return pointAmount;
     }
     float GeneratePoint(Segment segment, float currentLengthFound, bool lastOne, float theoricEndLength)
@@ -412,21 +430,20 @@ public class RopeGenerator2 : MonoBehaviour
         temporalPoints.Add(endingPoint);
                 
         ApplyVelocities(segment, temporalPoints);
-        for(int i = 0; i < 10; i++)
-        {
-            SimpleTwoWay(temporalPoints, extra);
-        }
-        OneWayDetecion(temporalPoints, out segment.middlePoints, extra);
+        //for(int i = 0; i < 10; i++)
+        //{
+          // SimpleTwoWay(temporalPoints, extra);
+        //}
+        //OneWayDetecion(temporalPoints, out segment.middlePoints, extra);
 
-        //StartToEnd(temporalPoints, extra);   
-        //EndToStart(temporalPoints, extra, out segment.middlePoints);
+        StartToEnd(temporalPoints, extra);   
+        EndToStart(temporalPoints, extra, out segment.middlePoints);
 
         temporalPoints.RemoveAt(0);
         temporalPoints.RemoveAt(temporalPoints.Count-1);
 
         return AssingPoints(temporalPoints, segment, lastOne);
     }
-    
     void SimpleTwoWay(List<InertiaPoint> positionsTemp, float extra)
     {
         for(int i = 1; i< positionsTemp.Count; i++)
@@ -440,11 +457,17 @@ public class RopeGenerator2 : MonoBehaviour
             Vector3 directionForward = (trans2-trans1).normalized;
             float distance = Vector3.Distance(trans2,trans1);
             if(i == 1 && extra > 0)
-                tempDistance *= extra;
-            if(distance>tempDistance)
             {
-                trans1 += (distance-tempDistance)*(directionForward).normalized/2;  
-                trans2 -= (distance-tempDistance)*(directionForward).normalized/2;  
+                tempDistance *= extra;
+                trans1 += (distance-tempDistance)*(directionForward).normalized; 
+            }
+            else
+            {
+                if((distance > distanceBetweenPoints && canStrech) || !canStrech)
+                {
+                    trans1 += (distance-distanceBetweenPoints)*(directionForward).normalized/2;  
+                    trans2 -= (distance-distanceBetweenPoints)*(directionForward).normalized/2; 
+                }
             }
             InertiaPoint current = positionsTemp[i];
             current.point = trans1;
@@ -456,6 +479,8 @@ public class RopeGenerator2 : MonoBehaviour
     }
     void OneWayDetecion(List<InertiaPoint> temporalPoints, out List<MiddlePoint> middlePoints, float extra)
     {
+        //Posar el nou sistema, entre punts, i entre antic i nou, primer entre antic i nou, si xoca, recol·locar, despres entre el punt final i l'anterior, si toca, introudir una cantonada. 
+        //Si el punt antic es troba dins d'algo, pensar un sistema de deteccio
         List<MiddlePoint> middles = new List<MiddlePoint>();
         for(int i = 1; i<temporalPoints.Count; i++)
         {
@@ -464,22 +489,17 @@ public class RopeGenerator2 : MonoBehaviour
             Vector3 trans1 = temporalPoints[i].point;
             Vector3 trans2 = temporalPoints[i-1].point;                 
             float tempDistance = distanceBetweenPoints;  
-            float distance = (trans1-trans2).magnitude;          
-            if(i == temporalPoints.Count-1 && extra > 0)
-                tempDistance *= extra;
+            float distance = (trans1-trans2).magnitude;   
+            Vector3 oldPoint = temporalPoints[i].previousPoint;      
+            RaycastHit hit;
+            if(Physics.Raycast(oldPoint, trans1-oldPoint, out hit, (trans1-oldPoint).magnitude, ropeLayers))            
+                trans1 = hit.point+hit.normal*ropeRadious;            
             Edge temp = CollisionDetectionBetweenPoints(trans1, trans2);
             if(temp != null)
             {
                 MiddlePoint middle = new MiddlePoint(temp, i);
                 middles.Add(middle);  
-            }     
-
-            if(distance > tempDistance)     
-            {       
-                Debug.DrawRay(trans1, Vector3.up*2);
-                trans1 += (trans1-trans2).normalized*(distance-tempDistance);   
-            }         
-
+            }
             if(showRopeKinematicLines)
             {
                 Debug.DrawLine(trans1,trans2, Color.magenta);
@@ -545,13 +565,14 @@ public class RopeGenerator2 : MonoBehaviour
     }
     void ApplyVelocities(Segment segment, List<InertiaPoint> pointsTemp)
     {
-        Vector3 startingPoint;
-        Vector3 currentPoint;
+        Vector3 startingPoint = segment.startingEdge.point;
         Vector3 lastPoint;
-        Vector3 directionPlane;
-        Plane plane;
+        Vector3 tensionLine;
+        Plane tensionPlane;
         Vector3 gravityVector = Vector3.down*ropeGravity*Time.fixedDeltaTime;
         InertiaPoint currentInertia;
+        Vector3 currentPoint;
+        Vector3 beforePoint;
         RaycastHit hit;
         Collider[] onPointCollisions;
 
@@ -559,27 +580,28 @@ public class RopeGenerator2 : MonoBehaviour
         {
             if(pointsTemp[i].fixedPoint)
                 continue;
-            
+            beforePoint = pointsTemp[i-1].point;
             currentInertia = pointsTemp[i];
-            startingPoint = segment.startingEdge.point;
-            currentPoint = currentInertia.point;
             
+            currentPoint = currentInertia.point;            
             lastPoint = currentInertia.previousPoint;
-                        Debug.DrawLine(currentPoint, lastPoint, Color.red);
-
+            
             currentInertia.previousPoint = currentPoint;
-            directionPlane = segment.startingEdge.point-segment.endingEdge.point;
-            plane = new Plane(directionPlane, currentPoint);
-            Vector3 velocityVector = (currentPoint-lastPoint)*ropeAirFriction;
-            Debug.DrawRay(currentPoint, velocityVector);
-            Vector3 pointInPlaneClose = plane.ClosestPointOnPlane(segment.startingEdge.point)+velocityVector*(1-ropeTension);
+            tensionLine = segment.startingEdge.point-segment.endingEdge.point;
+            tensionPlane = new Plane(tensionLine, currentPoint);
+            Vector3 velocityVector;
+            if(currentCooldown == 0)
+                velocityVector = (currentPoint-lastPoint)*ropeAirFriction;
+            else
+                velocityVector = Vector3.zero;
+            Vector3 pointInPlaneClose = tensionPlane.ClosestPointOnPlane(segment.startingEdge.point)+velocityVector*(1-ropeTension);
             Vector3 tensionPoint = Vector3.Lerp(currentPoint+gravityVector+velocityVector, pointInPlaneClose, ropeTension);
-            directionPlane = tensionPoint-currentPoint;
+            tensionLine = tensionPoint-currentPoint;
             //Problema amb la tensio, estic modificant el punt ja modificat, cosa que dona a l'extranya velocitat de tensio
             //que apareix ara mateix            
             onPointCollisions = Physics.OverlapSphere(tensionPoint, ropeRadious, ropeLayers);            
-            if(Physics.SphereCast(currentPoint, ropeRadious-ropeRadious*1.2f, directionPlane, out hit, directionPlane.magnitude+ropeRadious,ropeLayers))            
-                currentPoint = hit.point-directionPlane.normalized*ropeRadious;            
+            if(Physics.SphereCast(currentPoint, ropeRadious-ropeRadious*1.2f, tensionLine, out hit, tensionLine.magnitude+ropeRadious,ropeLayers))            
+                currentPoint = hit.point-tensionLine.normalized*ropeRadious;            
             else if(onPointCollisions.Length <= 0)            
                 currentPoint = tensionPoint;   
 
