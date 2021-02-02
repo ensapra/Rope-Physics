@@ -1,39 +1,32 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEditor;
 
 public class TheRopeGenerator : MonoBehaviour
 {
-    [Header("The Start And The End")]
-    public bool fixedPointA;
-    public ThePoint fixedPositionA;
-    public Transform fixedObjectA;
-
-    public bool fixedPointB;
-    public ThePoint fixedPositionB;
-    public Transform fixedObjectB;
-
-    public float Lenght;
-    public float realLenght;
-    public float extra;
+    [Header("Performance Settings")]
+    public bool RUN = true;
+    [Range(1,200)] public int maxPointsLimit = 100;
+    [Range(1,100)] public int resolution = 10;
+    [Range(0,1)] public float strechiness;
 
     [Header("The Points")]
-    public List<ThePoint> points;
-    public List<Vector3> constrainedPoint;
-
+    public List<DynamicPoint> dynamicPoints;
+    
     [Header("RopeConfiguration")]
+    public float Lenght;
+    public float realLenght;
     public float ropeRadious;
     [Range(0,1)]public float groundFriction;
     public LayerMask ropeLayers;
-    [Range(0,1)] public float strechiness;
     public float distanceBetweenPoints;
     public float gravity;
-    public int maxPointsLimit = 100;
     public bool canFlop;
 
     [Header("Visualizer")]
-    LineRenderer lineRenderer;
     public Material material;
+    LineRenderer lineRenderer;
     public bool DrawRopeLines;
 
     void Start()
@@ -50,31 +43,25 @@ public class TheRopeGenerator : MonoBehaviour
 
     void FixedUpdate()
     {
+        if(!RUN)
+            return;
         float extraDistance = GenerateInBetweenPoints();
         AddPhysics();
         AddConstraints(extraDistance);
-        CollisionSolver();
+        CollisionSolver(dynamicPoints);
         VisualizePoints();
     }
     float GenerateInBetweenPoints()
     {
-        if(fixedPointA && fixedObjectA != null)
-        {
-            fixedPositionA.currentPoint = fixedObjectA.transform.position;
-        }
-        if(fixedPointB && fixedObjectB != null)
-        {
-            fixedPositionB.currentPoint= fixedObjectB.transform.position;
-        }
-
         int amountOfPoints = Mathf.FloorToInt(Lenght/distanceBetweenPoints);
-        amountOfPoints = Mathf.Clamp(amountOfPoints, 0, maxPointsLimit);
-        extra = Lenght-distanceBetweenPoints*amountOfPoints;
+        float extra = Lenght-distanceBetweenPoints*amountOfPoints;
         if(extra <= 0)
             amountOfPoints -= 1;
         else
             amountOfPoints += 1;
-        if(points.Count < amountOfPoints)
+        
+        amountOfPoints = Mathf.Clamp(amountOfPoints, 0, maxPointsLimit);
+        if(dynamicPoints.Count-2 < amountOfPoints)
         {
             DoPoints(amountOfPoints);
         }
@@ -85,44 +72,32 @@ public class TheRopeGenerator : MonoBehaviour
     }
     void RemovePoints(int amountOfPoints)
     {
-        points.RemoveRange(amountOfPoints, points.Count-amountOfPoints);
+        dynamicPoints.RemoveRange(amountOfPoints+1, dynamicPoints.Count-2-amountOfPoints);
     }
     void DoPoints(int amountOfPoints)
     {
-        Vector3 fromAPoint = fixedPositionA.currentPoint;
-        Vector3 fromBPoint = fixedPositionB.currentPoint;
-        ThePoint pointA = new ThePoint(fromAPoint, fromAPoint);
-        ThePoint pointB = new ThePoint(fromBPoint, fromBPoint);
-        if(fixedPointA && points.Count < amountOfPoints)
+        DynamicPoint startA = dynamicPoints[0];
+        DynamicPoint startB = dynamicPoints[dynamicPoints.Count-1];
+        DynamicPoint pointA = new DynamicPoint(dynamicPoints[0]);
+        DynamicPoint pointB = new DynamicPoint(dynamicPoints[dynamicPoints.Count-1]);
+        amountOfPoints += 2;
+        if(startA.isFixed && dynamicPoints.Count < amountOfPoints)
         {
-            points.Insert(0, pointA);
+            dynamicPoints.Insert(1, pointA);
         }
-        if(fixedPointB && points.Count < amountOfPoints)
+        if(startB.isFixed && dynamicPoints.Count < amountOfPoints)
         {
-            points.Add(pointB);
+            dynamicPoints.Insert(dynamicPoints.Count-1,pointB);
         }       
     }
     void AddPhysics()
     {
-        if(!fixedPointA)
-        {
-            DoPhysics(fixedPositionA);
-        }
-        else
-            fixedPositionA.lastPoint = fixedPositionA.currentPoint;
-        if(!fixedPointB)
-        {
-            DoPhysics(fixedPositionB);
-        }
-        else
-            fixedPositionB.lastPoint = fixedPositionB.currentPoint;
-        
-        for(int i = 0; i < points.Count; i++)
-        {
-            DoPhysics(points[i]);
+        for(int i = 0; i < dynamicPoints.Count; i++)
+        {   
+            DoPhysics(dynamicPoints[i]);
         }
     }
-    void DoPhysics(ThePoint point)
+    void DoPhysics(DynamicPoint point)
     {
         Vector3 current = point.currentPoint;
         Vector3 last = point.lastPoint;
@@ -132,99 +107,110 @@ public class TheRopeGenerator : MonoBehaviour
     }
     void AddConstraints(float extraDistance)
     {
-        List<ThePoint> temporalCopy = new List<ThePoint>(points);
-        temporalCopy.Insert(0, fixedPositionA);
-        temporalCopy.Add(fixedPositionB);      
-        int load = Mathf.FloorToInt(Mathf.Lerp(1,10/distanceBetweenPoints, strechiness));
-        int lastPoint = temporalCopy.Count;
-        float distanceInHalf = extraDistance/2;
+        List<DynamicPoint> temporalCopy = new List<DynamicPoint>(dynamicPoints);
+        int load = Mathf.FloorToInt(Mathf.Lerp(1, resolution/distanceBetweenPoints, strechiness));
         for(int x = 0; x < load; x++)
         {
-            for(int i = 1; i < lastPoint; i++)
-            {
-                ThePoint currentI1 = temporalCopy[i];
-                ThePoint currentI2 = temporalCopy[i-1];
-                Vector3 trans1 = currentI1.currentPoint;
-                Vector3 trans2 = currentI2.currentPoint; 
-                Vector3 directionForward = (trans2-trans1).normalized;
-                float distance = Vector3.Distance(trans2,trans1);
-                if((i == 1 || i == lastPoint-1) && extraDistance > 0)
-                {
-                    if((distance > distanceInHalf && canFlop) || !canFlop)
-                    {
-                        if(i == 1)
-                            trans1 += (distance-distanceInHalf)*(directionForward).normalized;  
-                        else
-                            trans2 -= (distance-distanceInHalf)*(directionForward).normalized; 
-                    }
-                }
-                else
-                if((distance > distanceBetweenPoints && canFlop) || !canFlop)
-                {
-                    trans1 += (distance-distanceBetweenPoints)*(directionForward).normalized/2;  
-                    trans2 -= (distance-distanceBetweenPoints)*(directionForward).normalized/2; 
-                }
-
-                if((i == lastPoint-1 && !fixedPointB) || i != lastPoint-1)   
-                {
-                    currentI1.currentPoint = trans1;
-                    temporalCopy[i] = currentI1;     
-                }
-
-                if((i == 1 && !fixedPointA) || i != 1)   
-                {
-                    currentI2.currentPoint = trans2;
-                    temporalCopy[i-1] = currentI2;
-                }
-            }
+            DoConstraint(extraDistance, temporalCopy);
         }        
-        temporalCopy.Remove(fixedPositionA);
-        temporalCopy.Remove(fixedPositionB);
-        points = temporalCopy;
+        dynamicPoints = temporalCopy;
     }
-    void CollisionSolver()
+    void DoConstraint(float extraDistance, List<DynamicPoint> temporalCopy)
     {
-        for(int i = 0; i < points.Count; i++)
+        int lastPoint = temporalCopy.Count;
+        float distanceInHalf = extraDistance/2;
+        for(int i = 1; i < lastPoint; i++)
         {
-            ChangePositionCollision(points[i]);
+            DynamicPoint currentI1 = temporalCopy[i];
+            DynamicPoint currentI2 = temporalCopy[i-1];
+            Vector3 trans1 = currentI1.currentPoint;
+            Vector3 trans2 = currentI2.currentPoint; 
+            
+            Vector3 directionForward = (trans2-trans1).normalized;
+            float distance = Vector3.Distance(trans2,trans1);
+            
+            Vector3 directionAddition;
+            float tempDistance;
+            /*if((i == 1 || i == lastPoint-1) && extraDistance > 0)
+            {
+                tempDistance = distanceInHalf*(currentI1.percent+ (1-currentI2.percent));
+                directionAddition = (distance-tempDistance)*(directionForward).normalized;
+            }
+            else
+            {*/
+                tempDistance = distanceBetweenPoints*(currentI1.percent+ (1-currentI2.percent));
+                directionAddition = (distance-tempDistance)*(directionForward).normalized/2;
+            //}
+
+            if(!canFlop || (canFlop && distance > tempDistance))
+            {
+                trans1 += directionAddition;  
+                trans2 -= directionAddition; 
+            }   
+
+            currentI1.currentPoint = trans1;
+            currentI2.currentPoint = trans2;
         }
     }
-    void ChangePositionCollision(ThePoint point)
+    void CollisionSolver(List<DynamicPoint> pointsToEdit)
+    {
+        for(int i = 0; i < pointsToEdit.Count; i++)
+        {
+            ChangeFromRigidbodies(pointsToEdit[i]);
+            ChangePositionCollision(pointsToEdit[i]);
+            //AddForcesToRigidbodies(points[i], additive);
+        }
+    }
+    void AddForcesToRigidbodies(DynamicPoint point, RaycastHit hit)
+    {
+        if(hit.collider)
+        {
+            Rigidbody rb = hit.collider.GetComponent<Rigidbody>();
+            if(rb != null)
+            {
+                Vector3 force = point.currentPoint- point.lastPoint;
+                Vector3 position = hit.collider.ClosestPoint(point.currentPoint);
+                rb.AddForceAtPosition(force, position);
+            }     
+        }   
+    }
+    void ChangeFromRigidbodies(DynamicPoint point)
+    {
+        Vector3 lastPoint = point.lastPoint;
+        Collider[] collidersInside = Physics.OverlapSphere(lastPoint, ropeRadious, ropeLayers);
+        if(collidersInside.Length> 0)
+        {
+            for(int i = 0; i < collidersInside.Length; i++)
+            {
+                Rigidbody rb = collidersInside[i].GetComponent<Rigidbody>();
+                if(rb)                    
+                    lastPoint += rb.velocity*Time.deltaTime;                
+            }
+        }
+        point.lastPoint = lastPoint;
+    }
+    void ChangePositionCollision(DynamicPoint point)
     {
         Vector3 startingPoint = point.lastPoint;
         Vector3 finalPoint = point.currentPoint;
         Vector3 direction = finalPoint-startingPoint;
-        Vector3 original = direction;
-        Vector3 points = Vector3.zero;
         RaycastHit hit;
-        if(Physics.SphereCast(startingPoint, ropeRadious*0.9f, direction, out hit, direction.magnitude, ropeLayers))        
-            finalPoint = hit.point + hit.normal*ropeRadious; 
-        for(int i = 0; i < 20; i++)
+        if(Physics.SphereCast(startingPoint, ropeRadious*0.9f, direction, out hit, direction.magnitude, ropeLayers))
         {
-            if(Physics.SphereCast(startingPoint, ropeRadious*0.9f, direction, out hit, direction.magnitude, ropeLayers))  
-            {      
-                direction  -= Vector3.Project(direction, hit.normal);
-                if(i == 0)
-                    points = (hit.point + hit.normal*ropeRadious);
-                else
-                    points += (hit.point + hit.normal*ropeRadious);
-            }       
-            else
-            {
-                if(i != 0)
-                    finalPoint = points/i + direction;
-                Debug.DrawRay(startingPoint, direction, Color.magenta);
-                break;
-            }
+            Plane temporalPlane = new Plane(hit.normal, hit.point+hit.normal*ropeRadious);
+            finalPoint = temporalPlane.ClosestPointOnPlane(finalPoint);
         }
-
+        direction = finalPoint-startingPoint;
+        RaycastHit nonAll;
+        if(Physics.SphereCast(startingPoint, ropeRadious*0.8f, direction, out nonAll, direction.magnitude, ropeLayers))
+            finalPoint = hit.point+hit.normal*ropeRadious;
+        AddForcesToRigidbodies(point, hit);
         Collider[] colliders = Physics.OverlapSphere(finalPoint, ropeRadious, ropeLayers);
-        Vector3 normals = Vector3.zero;
         if(colliders.Length > 0)
         {
-            for(int x = 0; x < colliders.Length; x++)
+            for(int i = 0; i < colliders.Length; i++)
             {
-                Vector3 collisionPoint = colliders[x].ClosestPoint(finalPoint);
+                Vector3 collisionPoint = colliders[i].ClosestPoint(finalPoint);
                 Vector3 directionColl = (finalPoint-collisionPoint);
                 finalPoint += directionColl.normalized*(ropeRadious-directionColl.magnitude);
             }
@@ -234,16 +220,15 @@ public class TheRopeGenerator : MonoBehaviour
         {
             Vector3 newDirection = startingPoint-finalPoint;
             point.currentPoint = finalPoint;
-            point.lastPoint = finalPoint + (startingPoint-finalPoint)*groundFriction;
+            point.lastPoint = finalPoint + (startingPoint-finalPoint)*(1-groundFriction);
         }
     }
     void VisualizePoints()
     {
-        List<ThePoint> temporalPoints = new List<ThePoint>(points);
-        temporalPoints.Insert(0,fixedPositionA);
-        temporalPoints.Add(fixedPositionB);
+        List<DynamicPoint> temporalPoints = new List<DynamicPoint>(dynamicPoints);
         realLenght = 0;
         List<Vector3> currentPoints = new List<Vector3>();
+        lineRenderer.widthMultiplier = ropeRadious*2;
         for(int x = 0; x < temporalPoints.Count; x++)
         {
             currentPoints.Add(temporalPoints[x].currentPoint);
@@ -259,23 +244,79 @@ public class TheRopeGenerator : MonoBehaviour
         lineRenderer.positionCount = currentPoints.Count;
         lineRenderer.SetPositions(currentPoints.ToArray());
     }
-    public Vector3 ClampMagnitude(Vector3 v, float min, float max)
-    {
-        double sm = v.sqrMagnitude;
-        if(sm > (double)max * (double)max) return v.normalized * max;
-        else if(sm < (double)min * (double)min) return v.normalized * min;
-        return v;
-    }
 }
 [System.Serializable]
-public class ThePoint
+public class DynamicPoint
 {
-    public Vector3 currentPoint;
-    public Vector3 lastPoint;
-    public ThePoint(Vector3 currentPoint, Vector3 lastPoint)
+    private Vector3 current;
+    private Vector3 last;
+    [SerializeField] private bool _fixed;
+    [Range(0,2)] public float percent = 1;
+    public Vector3 offsetOfForce;
+    public Transform realObject;
+    public Rigidbody realObjectRB;
+    private DestroyItselfPoint currentDestroyTemporal;
+    public Vector3 currentPoint{
+        get{return current;}
+        set{
+            if(_fixed)
+            {
+                if(realObject != null)
+                {
+                    if(realObjectRB == null || realObjectRB.isKinematic)
+                        current = realObject.position+realObject.TransformDirection(offsetOfForce);
+                    else
+                    {
+                        realObjectRB.AddForceAtPosition((value-current), realObject.position+realObject.TransformDirection(offsetOfForce), ForceMode.Impulse);
+                        current = realObject.position+realObject.TransformDirection(offsetOfForce);
+                    }
+                }
+                else
+                {
+                    GameObject currentFake = new GameObject("FakeRealWorld Point");
+                    currentDestroyTemporal = currentFake.AddComponent<DestroyItselfPoint>();
+                    currentFake.transform.position = last;
+                    realObject = currentFake.transform;
+                    current = last;
+                }
+                last = current;
+            }
+            else
+            {
+                if(realObject && currentDestroyTemporal)
+                   currentDestroyTemporal.Destroy();
+                current = value;
+            }
+        }
+    }
+    public Vector3 lastPoint{
+        get{return last;}
+        set{last = value;}
+    }
+    public bool isFixed{
+        get{ return _fixed;}
+        set{}
+    }
+    public void AssignObject(GameObject referent)
+    {
+        realObject = referent.transform;
+        realObjectRB = referent.GetComponent<Rigidbody>();
+    }
+    public DynamicPoint(Vector3 currentPoint, Vector3 lastPoint)
     {
         this.currentPoint = currentPoint;
         this.lastPoint = lastPoint;
     }
+    public DynamicPoint(DynamicPoint point)
+    {
+        this.currentPoint = point.currentPoint;
+        this.lastPoint = point.lastPoint;
+    }
 }
-
+public class DestroyItselfPoint : MonoBehaviour
+{
+    public void Destroy()
+    {
+        Destroy(this.gameObject);
+    }
+}

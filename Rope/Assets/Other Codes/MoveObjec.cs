@@ -5,23 +5,28 @@ using UnityEngine;
 public class MoveObjec : MonoBehaviour
 {
     public Vector3 maxOffset;
-    public Vector3 currenty;
+    private Vector3 currenty;
     public Vector3 velocity;
+    private Rigidbody rb;
     public bool going;
     public bool move;
+    void Start()
+    {
+        rb = GetComponent<Rigidbody>();
+    }
     void FixedUpdate()
     {
         if(!move)
             return;
-        velocity += Vector3.up*Time.deltaTime/5;
+        velocity += velocity.normalized*Time.deltaTime;
         if(going)
         {
-            transform.position += velocity*Time.deltaTime;
+            rb.velocity = velocity;
             currenty += velocity*Time.deltaTime;
         }
         else
         {
-            transform.position -= velocity*Time.deltaTime;
+            rb.velocity = -velocity;
             currenty -= velocity*Time.deltaTime;
         }
 
@@ -30,9 +35,5 @@ public class MoveObjec : MonoBehaviour
         if(!going && currenty.x <= 0 && currenty.y <= 0 && currenty.z <= 0)
             going = true;
 
-    }
-    void Start()
-    {
-        
     }
 }
