@@ -971,8 +971,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   RUN: 1
   maxPointsLimit: 100
-  resolution: 100
-  strechiness: 1
+  minMaxResolution: {x: 10, y: 80}
   dynamicPoints:
   - _fixed: 1
     percent: 1
@@ -984,8 +983,7 @@ MonoBehaviour:
     offsetOfForce: {x: -0.48, y: 0, z: 0}
     realObject: {fileID: 303660134}
     realObjectRB: {fileID: 303660138}
-  Lenght: 10
-  realLenght: 0
+  Lenght: {x: 10, y: 0}
   ropeRadious: 0.1
   groundFriction: 0.2
   ropeLayers:
@@ -993,7 +991,7 @@ MonoBehaviour:
     m_Bits: 823
   distanceBetweenPoints: 1
   gravity: 2
-  canFlop: 0
+  canFlop: 1
   material: {fileID: 2100000, guid: c48b15ff36aa0ec4db511c162f32998e, type: 2}
   DrawRopeLines: 0
 --- !u!4 &483191094
@@ -1038,7 +1036,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 544494194}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 7.5, y: 0.56, z: -17.05}
+  m_LocalPosition: {x: 7.5, y: 0.56, z: -16.84}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 1275444467}
@@ -1058,10 +1056,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cc57fcaa3e723e44eaf7882d4060d5a5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  RUN: 1
+  RUN: 0
   maxPointsLimit: 100
-  resolution: 10
-  strechiness: 1
+  minMaxResolution: {x: 1, y: 100}
   dynamicPoints:
   - _fixed: 1
     percent: 0
@@ -1073,8 +1070,7 @@ MonoBehaviour:
     offsetOfForce: {x: 0, y: 0, z: 0}
     realObject: {fileID: 2137124656}
     realObjectRB: {fileID: 2137124660}
-  Lenght: 10
-  realLenght: 0
+  Lenght: {x: 0, y: 0}
   ropeRadious: 0.1
   groundFriction: 0.2
   ropeLayers:
@@ -2010,7 +2006,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1268408923}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -2.39, z: 0}
+  m_LocalPosition: {x: 0, y: 2.7, z: 0}
   m_LocalScale: {x: 2.41, y: 1, z: 3.67}
   m_Children: []
   m_Father: {fileID: 483191094}
@@ -3509,12 +3505,12 @@ PrefabInstance:
     - target: {fileID: 8372984432021866671, guid: 8ac32ad00c2ac1d43bb25ec86331e829,
         type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0.026945341
+      value: -0.026945338
       objectReference: {fileID: 0}
     - target: {fileID: 8372984432021866671, guid: 8ac32ad00c2ac1d43bb25ec86331e829,
         type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.026945345
+      value: 0.026945341
       objectReference: {fileID: 0}
     - target: {fileID: 8372984432878733564, guid: 8ac32ad00c2ac1d43bb25ec86331e829,
         type: 3}

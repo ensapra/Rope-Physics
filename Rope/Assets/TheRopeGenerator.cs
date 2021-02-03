@@ -8,20 +8,22 @@ public class TheRopeGenerator : MonoBehaviour
     [Header("Performance Settings")]
     public bool RUN = true;
     [Range(1,200)] public int maxPointsLimit = 100;
-    [Range(1,100)] public int resolution = 10;
-    [Range(0,1)] public float strechiness;
+    public Vector2 minMaxResolution = new Vector2(1,100);
+    int previousRemovedPoints;
 
     [Header("The Points")]
     public List<DynamicPoint> dynamicPoints;
     
     [Header("RopeConfiguration")]
-    public float Lenght;
-    public float realLenght;
+    public Vector2 Lenght;
+    //public float Lenght;
+    //[SerializeField] private float realLenght;
     public float ropeRadious;
-    [Range(0,1)]public float groundFriction;
+    [Range(0,1)] public float groundFriction;
     public LayerMask ropeLayers;
     public float distanceBetweenPoints;
     public float gravity;
+    [Tooltip("Should the rope be treated as sticks, or bend in itself, therefore, flop")]
     public bool canFlop;
 
     [Header("Visualizer")]
@@ -38,57 +40,62 @@ public class TheRopeGenerator : MonoBehaviour
         ropeLayers = LayerMask.GetMask("Default");
         lineRenderer.material = material;
         GenerateInBetweenPoints();
-        AddConstraints(0);
+        AddConstraints();
     }
 
     void FixedUpdate()
     {
         if(!RUN)
             return;
-        float extraDistance = GenerateInBetweenPoints();
+        GenerateInBetweenPoints();
         AddPhysics();
-        AddConstraints(extraDistance);
+        AddConstraints();
         CollisionSolver(dynamicPoints);
         VisualizePoints();
     }
-    float GenerateInBetweenPoints()
+    void GenerateInBetweenPoints()
     {
-        int amountOfPoints = Mathf.FloorToInt(Lenght/distanceBetweenPoints);
-        float extra = Lenght-distanceBetweenPoints*amountOfPoints;
-        if(extra <= 0)
-            amountOfPoints -= 1;
-        else
-            amountOfPoints += 1;
-        
-        amountOfPoints = Mathf.Clamp(amountOfPoints, 0, maxPointsLimit);
+        int amountOfPoints = ((int)(Lenght.x/distanceBetweenPoints)/2)*2;
+        float extra = Lenght.x-distanceBetweenPoints*amountOfPoints;
+        amountOfPoints += 1;
+        ModifiedPercent(extra);       
+        amountOfPoints = Mathf.Clamp(amountOfPoints, 0 , maxPointsLimit);
         if(dynamicPoints.Count-2 < amountOfPoints)
-        {
             DoPoints(amountOfPoints);
-        }
         else
-            RemovePoints(amountOfPoints);
-        
-        return extra;
+            RemovePoints(amountOfPoints);        
+    }
+    void ModifiedPercent(float extraDistance)
+    {
+        extraDistance = Mathf.Clamp(extraDistance, 0,2);
+        dynamicPoints[0].percent = (2-extraDistance/2);
+        dynamicPoints[dynamicPoints.Count-1].percent = (extraDistance/2);
     }
     void RemovePoints(int amountOfPoints)
     {
-        dynamicPoints.RemoveRange(amountOfPoints+1, dynamicPoints.Count-2-amountOfPoints);
+        int quantity = dynamicPoints.Count-2-amountOfPoints;
+        quantity = quantity/2;
+        dynamicPoints.RemoveRange(1, quantity);
+        dynamicPoints.RemoveRange(dynamicPoints.Count-2-quantity, quantity);
     }
     void DoPoints(int amountOfPoints)
     {
         DynamicPoint startA = dynamicPoints[0];
         DynamicPoint startB = dynamicPoints[dynamicPoints.Count-1];
+        
         DynamicPoint pointA = new DynamicPoint(dynamicPoints[0]);
         DynamicPoint pointB = new DynamicPoint(dynamicPoints[dynamicPoints.Count-1]);
+        
         amountOfPoints += 2;
         if(startA.isFixed && dynamicPoints.Count < amountOfPoints)
         {
             dynamicPoints.Insert(1, pointA);
         }
+        
         if(startB.isFixed && dynamicPoints.Count < amountOfPoints)
         {
             dynamicPoints.Insert(dynamicPoints.Count-1,pointB);
-        }       
+        }    
     }
     void AddPhysics()
     {
@@ -105,20 +112,19 @@ public class TheRopeGenerator : MonoBehaviour
         point.currentPoint = movedPoint;
         point.lastPoint = current;
     }
-    void AddConstraints(float extraDistance)
+    void AddConstraints()
     {
         List<DynamicPoint> temporalCopy = new List<DynamicPoint>(dynamicPoints);
-        int load = Mathf.FloorToInt(Mathf.Lerp(1, resolution/distanceBetweenPoints, strechiness));
-        for(int x = 0; x < load; x++)
+        int resolution = (int)(minMaxResolution.y - (Mathf.Lerp(minMaxResolution.x, minMaxResolution.y, Lenght.x/100))+minMaxResolution.x);
+        for(int x = 0; x < resolution; x++)
         {
-            DoConstraint(extraDistance, temporalCopy);
+            DoConstraint(temporalCopy);
         }        
         dynamicPoints = temporalCopy;
     }
-    void DoConstraint(float extraDistance, List<DynamicPoint> temporalCopy)
+    void DoConstraint(List<DynamicPoint> temporalCopy)
     {
         int lastPoint = temporalCopy.Count;
-        float distanceInHalf = extraDistance/2;
         for(int i = 1; i < lastPoint; i++)
         {
             DynamicPoint currentI1 = temporalCopy[i];
@@ -130,17 +136,8 @@ public class TheRopeGenerator : MonoBehaviour
             float distance = Vector3.Distance(trans2,trans1);
             
             Vector3 directionAddition;
-            float tempDistance;
-            /*if((i == 1 || i == lastPoint-1) && extraDistance > 0)
-            {
-                tempDistance = distanceInHalf*(currentI1.percent+ (1-currentI2.percent));
-                directionAddition = (distance-tempDistance)*(directionForward).normalized;
-            }
-            else
-            {*/
-                tempDistance = distanceBetweenPoints*(currentI1.percent+ (1-currentI2.percent));
-                directionAddition = (distance-tempDistance)*(directionForward).normalized/2;
-            //}
+            float tempDistance = distanceBetweenPoints*(currentI1.percent+(1-currentI2.percent));
+            directionAddition = (distance-tempDistance)*(directionForward).normalized/2;
 
             if(!canFlop || (canFlop && distance > tempDistance))
             {
@@ -226,14 +223,14 @@ public class TheRopeGenerator : MonoBehaviour
     void VisualizePoints()
     {
         List<DynamicPoint> temporalPoints = new List<DynamicPoint>(dynamicPoints);
-        realLenght = 0;
+        Lenght.y = 0;
         List<Vector3> currentPoints = new List<Vector3>();
         lineRenderer.widthMultiplier = ropeRadious*2;
         for(int x = 0; x < temporalPoints.Count; x++)
         {
             currentPoints.Add(temporalPoints[x].currentPoint);
             if(x > 0)
-                realLenght += Vector3.Distance(temporalPoints[x].currentPoint,temporalPoints[x-1].currentPoint);
+                Lenght.y += Vector3.Distance(temporalPoints[x].currentPoint,temporalPoints[x-1].currentPoint);
             if(DrawRopeLines)
             {
                 Debug.DrawRay(temporalPoints[x].currentPoint, Vector3.up, Color.red);
