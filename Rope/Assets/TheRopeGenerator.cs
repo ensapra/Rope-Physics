@@ -45,6 +45,13 @@ public class TheRopeGenerator : MonoBehaviour
 
     void FixedUpdate()
     {
+<<<<<<< Updated upstream
+=======
+        if(cornerDictionary.ContainsKey(targetCornerInt))
+            currentTargetCorners = cornerDictionary[targetCornerInt].currentCorners;
+        else
+            currentTargetCorners = null;
+>>>>>>> Stashed changes
         if(!RUN)
             return;
         GenerateInBetweenPoints();
@@ -117,6 +124,7 @@ public class TheRopeGenerator : MonoBehaviour
         List<DynamicPoint> temporalCopy = new List<DynamicPoint>(dynamicPoints);
         int resolution = (int)(minMaxResolution.y - (Mathf.Lerp(minMaxResolution.x, minMaxResolution.y, Lenght.x/100))+minMaxResolution.x);
         for(int x = 0; x < resolution; x++)
+<<<<<<< Updated upstream
         {
             DoConstraint(temporalCopy);
         }        
@@ -149,18 +157,239 @@ public class TheRopeGenerator : MonoBehaviour
             currentI2.currentPoint = trans2;
         }
     }
+=======
+        {        
+            for(int i = 1; i< lastPoint; i++)
+            {
+                DynamicPoint currentI1 = temporalCopy[i];
+                DynamicPoint currentI2 = temporalCopy[i-1];
+                if(cornerDictionary.ContainsKey(i))
+                    DoCornerConstraints(currentI1, currentI2, i, x == resolution-1);
+                else          
+                    DoConstraint(currentI1, currentI2);                
+            }
+        }    
+        MoveCorners();  
+        dynamicPoints = temporalCopy;
+    }
+    void MoveCorners()
+    {
+        Dictionary<int, CornerPack> temp = new Dictionary<int, CornerPack>(cornerDictionary);
+        for(int i = 0; i < dynamicPoints.Count; i++)
+        {
+            if(cornerDictionary.ContainsKey(i))
+            {
+                List<DynamicPoint> corners = cornerDictionary[i].currentCorners;
+                DynamicPoint trans1 = dynamicPoints[i];
+                DynamicPoint trans2 = dynamicPoints[i-1]; 
+                DynamicPoint trans2C = corners[corners.Count-1];
+                DynamicPoint trans1C = corners[0];
+                Vector3 dir = trans1.currentPoint-trans2C.currentPoint;
+                float distance = cornerDictionary[i].GetLength(trans1.currentPoint, trans2.currentPoint);
+                Debug.DrawRay(trans1.currentPoint, -dir, Color.magenta);
+                Debug.DrawLine(trans2C.currentPoint, trans1.currentPoint, Color.green);
+                float distanceI1 = (trans1.currentPoint-trans2C.currentPoint).magnitude/distance;
+                float distanceI2 = (trans2.currentPoint-trans1C.currentPoint).magnitude/distance;
+                if(distanceI1 < 0.05f)
+                    AddDynamicPoint(i, trans1C, 1, temp);
+                if(distanceI2 < 0.05f)
+                    AddDynamicPoint(i, trans2C, -1, temp);
+            }
+            else
+                continue;
+        }
+        cornerDictionary = temp;
+    }
+    void DoCornerConstraints(DynamicPoint currentI1, DynamicPoint currentI2, int i, bool last)
+    {
+        List<DynamicPoint> corners = cornerDictionary[i].currentCorners;
+        Vector3 trans1 = currentI1.currentPoint;
+        Vector3 trans2 = currentI2.currentPoint; 
+        DynamicPoint trans2C;
+        DynamicPoint trans1C;
+        float distance = cornerDictionary[i].GetLength(trans1, trans2);
+        for(int x = 0; x <= corners.Count; x++)
+        {
+            if(x == 0)
+                trans2C = currentI2;
+            else
+                trans2C = corners[x-1];
+
+            if(x == corners.Count)
+                trans1C = currentI1;
+            else
+                trans1C = corners[x];
+            DoConstraint(trans1C, trans2C, distance, currentI1.percent, currentI2.percent);
+        }
+    }
+    void DoConstraint(DynamicPoint currentI1,DynamicPoint currentI2, float distance, float percent1, float percent2)
+    {
+        Vector3 dfI1 = (currentI2.currentPoint-currentI1.currentPoint);
+        float tempDistance = (distanceBetweenPoints/distance)*dfI1.magnitude*(percent1+(1-percent2));
+        Vector3 directionAdditionI1 = (dfI1.magnitude-tempDistance)*(dfI1).normalized;
+        if(!canFlop || (canFlop && dfI1.magnitude > tempDistance))
+        {
+            currentI1.currentPoint += directionAdditionI1;
+            currentI2.currentPoint -= directionAdditionI1; 
+        }
+    }
+    void AddDynamicPoint(int i, DynamicPoint target, int dir, Dictionary<int, CornerPack> final)
+    {
+        final[i].currentCorners.Remove(target);
+        if(final[i].currentCorners.Count <= 0)
+            final.Remove(i);
+        if(i+dir < 0 || i+dir >= dynamicPoints.Count)
+            return;
+        if(final.ContainsKey(i+dir))
+        {
+            if(dir < 0)
+                final[i+dir].currentCorners.Add(target);
+            else
+                final[i+dir].currentCorners.Insert(0, target);
+        }
+        else
+        {
+            if(i+dir > dynamicPoints.Count-1 || i+dir <= 0)
+                return;
+            CornerPack temp = new CornerPack(target);
+            final.Add(i+dir, temp);
+        }
+    }
+    void DoConstraint(DynamicPoint currentI1, DynamicPoint currentI2)
+    {
+        Vector3 trans1 = currentI1.currentPoint;
+        Vector3 trans2 = currentI2.currentPoint; 
+        Vector3 directionForward = (trans2-trans1).normalized;
+        float distance = Vector3.Distance(trans2,trans1);
+        Vector3 directionAddition;
+        float tempDistance = distanceBetweenPoints*(currentI1.percent+(1-currentI2.percent));        
+        directionAddition = (distance-tempDistance)*(directionForward).normalized/2;
+        if(!canFlop || (canFlop && distance > tempDistance))
+        {
+            trans1 += directionAddition;  
+            trans2 -= directionAddition; 
+        }   
+        currentI1.currentPoint = trans1;
+        currentI2.currentPoint = trans2;
+    }
+    #endregion
+    #region Collision Solver
+>>>>>>> Stashed changes
     void CollisionSolver(List<DynamicPoint> pointsToEdit)
     {
         for(int i = 0; i < pointsToEdit.Count; i++)
         {
             ChangeFromRigidbodies(pointsToEdit[i]);
             ChangePositionCollision(pointsToEdit[i]);
+<<<<<<< Updated upstream
             //AddForcesToRigidbodies(points[i], additive);
+=======
+            if(i > 0)            
+                DoCornerDetection(i, pointsToEdit[i], pointsToEdit[i-1]);    
+        }
+    }
+
+    void DoCornerDetection(int i, DynamicPoint currentI1, DynamicPoint currentI2)
+    {
+        if(cornerDictionary.ContainsKey(i))
+            MultipleCornerDetection(cornerDictionary[i].currentCorners, i, currentI1, currentI2);
+        else
+        {
+            DynamicPoint cornerPoint = GenerateDynamic(currentI1.currentPoint,currentI2.currentPoint);
+            if(cornerPoint != null)
+            {
+                List<DynamicPoint> cornerPoints = new List<DynamicPoint>();
+                cornerPoints.Add(cornerPoint);
+                CornerPack pack = new CornerPack(cornerPoints);
+                cornerDictionary.Add(i, pack);
+            }
+        }
+    }
+    void MultipleCornerDetection(List<DynamicPoint> corners, int i, DynamicPoint currentI1, DynamicPoint currentI2)
+    {
+        corners = ValidateCurrentCorners(corners, currentI1, currentI2);
+        corners = GenerateNewCorners(corners, currentI1, currentI2);
+        if(corners.Count > 0)
+            cornerDictionary[i].currentCorners = corners;
+        else
+            cornerDictionary.Remove(i);
+    }
+    List<DynamicPoint> ValidateCurrentCorners(List<DynamicPoint> corners, DynamicPoint currentI1, DynamicPoint currentI2)
+    {
+        //NEEDS TO BE EDITED
+        List<DynamicPoint> temporalCorners = new List<DynamicPoint>();
+        for(int i = 0; i < corners.Count; i++)
+        {
+            DynamicPoint cornerPoint = null;
+            DynamicPoint firstDynamic;
+            DynamicPoint secondDynamic;
+            if(i == 0)
+                secondDynamic = currentI2;
+            else
+                secondDynamic = corners[i-1];
+            
+            if(i+1 >= corners.Count)
+                firstDynamic = currentI1;
+            else                
+                firstDynamic = corners[i+1];
+            if((corners[i].currentPoint-secondDynamic.currentPoint).magnitude < ropeRadious)
+                continue;
+            if(corners[i].cornerNormal1 == Vector3.zero|| corners[i].cornerNormal2 == Vector3.zero)
+                continue;
+            if(corners[i].cornerNormal1 == corners[i].cornerNormal2)
+                continue;
+            cornerPoint = corners[i];//GenerateDynamic(firstDynamic.currentPoint, secondDynamic.currentPoint);
+            if(cornerPoint != null)                
+            {
+                corners[i].cornerNormal1 = cornerPoint.cornerNormal1;
+                corners[i].cornerNormal2 = cornerPoint.cornerNormal2;
+                temporalCorners.Add(corners[i]); 
+            }
+        }
+        return temporalCorners;
+    }
+    List<DynamicPoint> GenerateNewCorners(List<DynamicPoint> corners, DynamicPoint currentI1, DynamicPoint currentI2)
+    {
+        List<DynamicPoint> temporalCorners = new List<DynamicPoint>();
+        for(int i = 0; i <= corners.Count; i++)
+        {
+            DynamicPoint cornerPoint = null;
+            DynamicPoint firstDynamic;
+            DynamicPoint secondDynamic;
+            if(i == 0)
+                secondDynamic = currentI2;
+            else
+                secondDynamic = corners[i-1];
+            
+            if(i == corners.Count)
+                firstDynamic = currentI1;
+            else                
+                firstDynamic = corners[i];
+
+            cornerPoint = GenerateDynamic(firstDynamic.currentPoint, secondDynamic.currentPoint);
+            //Aixo esta malament, no en bon ordre
+            if(cornerPoint != null)            
+                temporalCorners.Add(cornerPoint);            
+            if(i < corners.Count)
+                temporalCorners.Add(firstDynamic);
+>>>>>>> Stashed changes
         }
     }
     void AddForcesToRigidbodies(DynamicPoint point, RaycastHit hit)
     {
+<<<<<<< Updated upstream
         if(hit.collider)
+=======
+        RaycastHit hit1;
+        RaycastHit hit2;
+        Vector3 direction = I2-I1;
+        if(DrawRopeLines)
+            Debug.DrawLine(I2, I1, Color.yellow);
+        float magnitude = direction.magnitude;
+        Ray I1Ray = new Ray(I1, direction);
+        Ray I2Ray = new Ray(I2, -direction);
+        if(Physics.SphereCast(I1Ray, ropeRadious*0.9f, out hit1, magnitude, ropeLayers))
+>>>>>>> Stashed changes
         {
             Rigidbody rb = hit.collider.GetComponent<Rigidbody>();
             if(rb != null)
@@ -242,12 +471,47 @@ public class TheRopeGenerator : MonoBehaviour
         lineRenderer.SetPositions(currentPoints.ToArray());
     }
 }
+<<<<<<< Updated upstream
 [System.Serializable]
 public class DynamicPoint
 {
     private Vector3 current;
     private Vector3 last;
     [SerializeField] private bool _fixed;
+=======
+public class CornerPack
+{
+    public List<DynamicPoint> currentCorners;
+    public float GetLength(Vector3 I1, Vector3 I2)
+    {
+        float tempLength = 0;
+        tempLength += (I1-currentCorners[0].currentPoint).magnitude;
+        tempLength += (I2-currentCorners[currentCorners.Count-1].currentPoint).magnitude;
+        for(int i = 1; i < currentCorners.Count; i++)
+        {
+            tempLength += (currentCorners[i].currentPoint-currentCorners[i-1].currentPoint).magnitude;
+        }
+        return tempLength;
+    }
+    public CornerPack(List<DynamicPoint> currentCorners)
+    {
+        this.currentCorners = currentCorners;
+    }
+    public CornerPack(DynamicPoint currentCorner)
+    {
+        List<DynamicPoint> temp = new List<DynamicPoint>();
+        temp.Add(currentCorner);
+        this.currentCorners = temp;
+    }
+}
+public enum DynamicType{Normal, Fixed, Corner}
+[System.Serializable]
+public class DynamicPoint
+{
+    public Vector3 current;
+    public Vector3 last;
+    [SerializeField] private DynamicType _type = DynamicType.Normal;
+>>>>>>> Stashed changes
     [Range(0,2)] public float percent = 1;
     public Vector3 offsetOfForce;
     public Transform realObject;

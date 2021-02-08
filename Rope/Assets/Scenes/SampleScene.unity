@@ -971,18 +971,40 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   RUN: 1
   maxPointsLimit: 100
-  minMaxResolution: {x: 10, y: 80}
+  minMaxResolution: {x: 10, y: 10}
   dynamicPoints:
+<<<<<<< Updated upstream
   - _fixed: 1
+=======
+  - current: {x: 0, y: 0, z: 0}
+    last: {x: 0, y: 0, z: 0}
+    _type: 1
+>>>>>>> Stashed changes
     percent: 1
     offsetOfForce: {x: 0.48, y: 0, z: 0}
     realObject: {fileID: 411206411}
     realObjectRB: {fileID: 411206415}
+<<<<<<< Updated upstream
   - _fixed: 1
     percent: 1
     offsetOfForce: {x: -0.48, y: 0, z: 0}
     realObject: {fileID: 303660134}
     realObjectRB: {fileID: 303660138}
+=======
+    cornerNormal1: {x: 0, y: 0, z: 0}
+    cornerNormal2: {x: 0, y: 0, z: 0}
+  - current: {x: 0, y: 0, z: 0}
+    last: {x: 0, y: 0, z: 0}
+    _type: 1
+    percent: 1
+    offsetOfForce: {x: -0.48, y: 0, z: 0}
+    realObject: {fileID: 2028378642}
+    realObjectRB: {fileID: 2028378640}
+    cornerNormal1: {x: 0, y: 0, z: 0}
+    cornerNormal2: {x: 0, y: 0, z: 0}
+  currentTargetCorners: []
+  targetCornerInt: 0
+>>>>>>> Stashed changes
   Lenght: {x: 10, y: 0}
   ropeRadious: 0.1
   groundFriction: 0.2
@@ -1060,12 +1082,26 @@ MonoBehaviour:
   maxPointsLimit: 100
   minMaxResolution: {x: 1, y: 100}
   dynamicPoints:
+<<<<<<< Updated upstream
   - _fixed: 1
+=======
+  - current: {x: 0, y: 0, z: 0}
+    last: {x: 0, y: 0, z: 0}
+    _type: 0
+>>>>>>> Stashed changes
     percent: 0
     offsetOfForce: {x: 0, y: 0, z: 0}
     realObject: {fileID: 1275444467}
     realObjectRB: {fileID: 1275444471}
+<<<<<<< Updated upstream
   - _fixed: 1
+=======
+    cornerNormal1: {x: 0, y: 0, z: 0}
+    cornerNormal2: {x: 0, y: 0, z: 0}
+  - current: {x: 0, y: 0, z: 0}
+    last: {x: 0, y: 0, z: 0}
+    _type: 0
+>>>>>>> Stashed changes
     percent: 0
     offsetOfForce: {x: 0, y: 0, z: 0}
     realObject: {fileID: 2137124656}
@@ -2005,9 +2041,15 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1268408923}
+<<<<<<< Updated upstream
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 2.7, z: 0}
   m_LocalScale: {x: 2.41, y: 1, z: 3.67}
+=======
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 1.1999998, y: 10.59, z: 9.44}
+  m_LocalScale: {x: -4.33, y: 0.25, z: 9.88}
+>>>>>>> Stashed changes
   m_Children: []
   m_Father: {fileID: 483191094}
   m_RootOrder: 2
@@ -3197,6 +3239,18 @@ MonoBehaviour:
   targetLength: 0
   showRopeKinematicLines: 1
   showCornerVectors: 1
+--- !u!54 &2028378640 stripped
+Rigidbody:
+  m_CorrespondingSourceObject: {fileID: 1087668542931319203, guid: 6af436e64fa0e084aaf32c762fa3e22f,
+    type: 3}
+  m_PrefabInstance: {fileID: 1087668542501568159}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &2028378642 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1087668542931319201, guid: 6af436e64fa0e084aaf32c762fa3e22f,
+    type: 3}
+  m_PrefabInstance: {fileID: 1087668542501568159}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &2078161475 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1087668541860218076, guid: 6af436e64fa0e084aaf32c762fa3e22f,
