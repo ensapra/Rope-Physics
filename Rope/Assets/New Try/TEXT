@@ -1,0 +1,26 @@
+Rope Physics Testing Document
+
+Objectives:
+	Rope should be dynamic, meaning points should be created when needed, 
+	with a minimum standard resolution (maximum distance before creating a new point)
+
+	If an object enters into contact with the rope, a new point will be created as a flexing point
+	meaning that next points will be created from there. However, these new points will not move furhter points but stay at a relative position.
+
+	A segment, therefore, can have any number splits, and those splits are at a certain factor of the segment. 
+
+	A segment will take into account internal splits to make the simulation, creating new ones, removing others.
+
+	A segment has an internal show function, and simulate function, within it holds each of the internal steps.
+
+	For the application of forces, it will store the previous state of the rope, simulate each of the points, and then, calculate from the previous to the new one. 
+	An option is doing it twice, the first one for the forces, the second for the collision.
+
+	An other is doing all the calculation, and storing the removed part of each point on collision detection, maybe creating a vector that contains the amount removed in total and 
+	therefore, force applied.
+
+Structure:
+
+	A rope contains segments, starting point and ending point
+	A segment contains a starting point, an ending point, and internal points
+	A point contains a position, a previous position vector, a stored force vector
