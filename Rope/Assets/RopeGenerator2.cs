@@ -572,7 +572,6 @@ public class RopeGenerator2 : MonoBehaviour
         Vector3 gravityVector = Vector3.down*ropeGravity*Time.fixedDeltaTime;
         InertiaPoint currentInertia;
         Vector3 currentPoint;
-        Vector3 beforePoint;
         RaycastHit hit;
         Collider[] onPointCollisions;
 
@@ -580,7 +579,6 @@ public class RopeGenerator2 : MonoBehaviour
         {
             if(pointsTemp[i].fixedPoint)
                 continue;
-            beforePoint = pointsTemp[i-1].point;
             currentInertia = pointsTemp[i];
             
             currentPoint = currentInertia.point;            
