@@ -30,6 +30,19 @@ public class SegmentSim
             endingPoint.ConstrainPosition(-(distance-maximumDistance)*(forwardDirection).normalized); 
         }        
     }
+    public void ConstrainRopeFuture(float maximumDistance)
+    {
+        Vector3 starting = startingPoint.getFuturePosition();
+        Vector3 ending = endingPoint.getFuturePosition();
+        Vector3 forwardDirection = ending-starting;
+        float distance = Vector3.Distance(starting,ending);
+
+        if(distance > maximumDistance)
+        {
+            startingPoint.ConstrainFuture((distance-maximumDistance)*(forwardDirection).normalized);  
+            endingPoint.ConstrainFuture(-(distance-maximumDistance)*(forwardDirection).normalized); 
+        }        
+    }
     public void CollisionCheck(float ropeRadious, LayerMask ropeLayers, float groundFriction)
     {
         startingPoint.CollisionCheck(ropeRadious, ropeLayers, groundFriction);

@@ -2127,11 +2127,11 @@ MonoBehaviour:
   endingPoint: {fileID: 872340028}
   ropeGravity: 4
   maximumIterations: 30
-  maximumDistance: 1
+  maximumDistance: 5
   ropeLength: 10
   ropeRadious: 0.2
   currentLenght: 0
-  airFriction: 0.97
+  ropeFlexibility: 0.97
   groundFriction: 0.7
   collisionLayer:
     serializedVersion: 2
@@ -2146,7 +2146,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1178227403}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 34.31, y: 4.03, z: 10.09}
+  m_LocalPosition: {x: 10.04, y: 4.03, z: 10.09}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 1659184691}
@@ -3972,7 +3972,7 @@ PrefabInstance:
     - target: {fileID: 8372984432021866671, guid: 8ac32ad00c2ac1d43bb25ec86331e829,
         type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0.026945338
+      value: -0.026945336
       objectReference: {fileID: 0}
     - target: {fileID: 8372984432021866671, guid: 8ac32ad00c2ac1d43bb25ec86331e829,
         type: 3}
@@ -3982,7 +3982,7 @@ PrefabInstance:
     - target: {fileID: 8372984432021866671, guid: 8ac32ad00c2ac1d43bb25ec86331e829,
         type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.026945345
+      value: 0.026945343
       objectReference: {fileID: 0}
     - target: {fileID: 8372984432878733564, guid: 8ac32ad00c2ac1d43bb25ec86331e829,
         type: 3}

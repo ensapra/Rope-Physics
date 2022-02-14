@@ -87,7 +87,31 @@ public class RopeSim : MonoBehaviour
     }
     private void SimulateSegments()
     {
-        for(int z = 0; z < maximumIterations; z++)
+        //First do a pass where we will set the final position of the rope without collisions taking into account physics
+        for(int z = 0; z < maximumIterations/2; z++)
+        {
+            for(int i = 0; i< currentSegments.Count; i++)
+            {
+                if(z == 0 && i+1 < currentSegments.Count)
+                {
+                    if(i == 0)
+                        currentSegments[i].AddPhysics(Vector3.down*ropeGravity,ropeFlexibility);
+                    currentSegments[i+1].AddPhysics(Vector3.down*ropeGravity,ropeFlexibility);
+                }
+                currentSegments[i].ConstrainRopeFuture(maximumDistance);
+            }
+        }
+        //Second pass will set the rope taking into account collisions
+        for(int z = 0; z < maximumIterations/2; z++)
+        {
+            for(int i = 0; i< currentSegments.Count; i++)
+            {
+                currentSegments[i].ConstrainRope(maximumDistance);
+                currentSegments[i].CollisionCheck(ropeRadious,collisionLayer, groundFriction);
+            }
+        }
+        //Third single pass will add velocity to the rigidbodies in contact
+/*         for(int z = 0; z < maximumIterations; z++)
         {
             for(int i = 0; i< currentSegments.Count; i++)
             {
@@ -101,7 +125,7 @@ public class RopeSim : MonoBehaviour
                 if(z == maximumIterations-1)
                     currentSegments[i].CollisionCheck(ropeRadious,collisionLayer, groundFriction);
             }
-        }
+        } */
         //also for the ending point required to do
     }
     private void Visualize()

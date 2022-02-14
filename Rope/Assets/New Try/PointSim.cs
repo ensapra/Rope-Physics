@@ -7,6 +7,7 @@ public class PointSim
 {
     [SerializeField] Vector3 position;
     Vector3 previousPosition;
+    Vector3 futurePosition;
 
     [SerializeField] bool staticPoint;
     public PointSim(Vector3 position, bool staticPoint)
@@ -92,16 +93,23 @@ public class PointSim
     }
     public void UpdatePhysics(Vector3 gravity, float airFriction)
     {
+        futurePosition = position;
         Vector3 existingPrevious = previousPosition;
         previousPosition = position;
         if(staticPoint)
             return;
         Vector3 movedPoint = position + gravity*Time.fixedDeltaTime + (position-existingPrevious)*airFriction;
         position = movedPoint;
+        futurePosition = movedPoint;
     }
     public void UpdatePosition(Vector3 position)
     {
         this.position = position;
+    }
+    public void ConstrainFuture(Vector3 addition)
+    {
+        if(!staticPoint)
+            this.futurePosition += addition/2;
     }
     public void ConstrainPosition(Vector3 addition)
     {
@@ -111,6 +119,10 @@ public class PointSim
     public Vector3 getPosition()
     {
         return position;
+    }
+    public Vector3 getFuturePosition()
+    {
+        return futurePosition;
     }
 
 }
