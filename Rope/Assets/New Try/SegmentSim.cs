@@ -28,8 +28,11 @@ public class SegmentSim
         {
             startingPoint.ConstrainPosition((distance-maximumDistance)*(forwardDirection).normalized);  
             endingPoint.ConstrainPosition(-(distance-maximumDistance)*(forwardDirection).normalized); 
-        }
-        
+        }        
+    }
+    public void CollisionCheck(float ropeRadious, LayerMask ropeLayers, float groundFriction)
+    {
+        startingPoint.CollisionCheck(ropeRadious, ropeLayers, groundFriction);
     }
     public float getCurrentLenght()
     {

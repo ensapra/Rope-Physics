@@ -12,8 +12,11 @@ public class RopeSim : MonoBehaviour
     public int maximumIterations = 30;
     public float maximumDistance = 1;
     public float ropeLength = 5;
+    public float ropeRadious = 0.2f;
     public float currentLenght;
     public float airFriction;
+    public float groundFriction;
+    public LayerMask collisionLayer;
     private LineRenderer lineRenderer;
 
     // Start is called before the first frame update
@@ -91,6 +94,8 @@ public class RopeSim : MonoBehaviour
                 if(z == 0)
                     currentSegments[i].AddPhysics(Vector3.down*ropeGravity,airFriction);
                 currentSegments[i].ConstrainRope(maximumDistance);
+                if(z == maximumIterations-1)
+                    currentSegments[i].CollisionCheck(ropeRadious,collisionLayer, groundFriction);
             }
         }
         //also for the ending point required to do
