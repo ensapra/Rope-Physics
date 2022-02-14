@@ -14,7 +14,7 @@ public class RopeSim : MonoBehaviour
     public float ropeLength = 5;
     public float ropeRadious = 0.2f;
     public float currentLenght;
-    public float airFriction;
+    public float ropeFlexibility;
     public float groundFriction;
     public LayerMask collisionLayer;
     private LineRenderer lineRenderer;
@@ -91,8 +91,12 @@ public class RopeSim : MonoBehaviour
         {
             for(int i = 0; i< currentSegments.Count; i++)
             {
-                if(z == 0)
-                    currentSegments[i].AddPhysics(Vector3.down*ropeGravity,airFriction);
+                if(z == 0 && i+1 < currentSegments.Count)
+                {
+                    if(i == 0)
+                        currentSegments[i].AddPhysics(Vector3.down*ropeGravity,ropeFlexibility);
+                    currentSegments[i+1].AddPhysics(Vector3.down*ropeGravity,ropeFlexibility);
+                }
                 currentSegments[i].ConstrainRope(maximumDistance);
                 if(z == maximumIterations-1)
                     currentSegments[i].CollisionCheck(ropeRadious,collisionLayer, groundFriction);

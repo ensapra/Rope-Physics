@@ -21,23 +21,39 @@ public class PointSim
     public PointSim(PointSim originalPoint)
     {
         this.position = originalPoint.getPosition();
+        this.previousPosition = originalPoint.previousPosition;
         this.staticPoint = originalPoint.isStatic();
     }
     public void CollisionCheck(float ropeRadious, LayerMask ropeLayers, float groundFriction)
     {
-        Vector3 startingPoint = previousPosition;
+        InsideCollisionCheck(ropeRadious, ropeLayers);
         Vector3 finalPoint = position;
-        Vector3 direction = finalPoint-startingPoint;
-        RaycastHit hit;
-        if(Physics.SphereCast(startingPoint, ropeRadious*0.9f, direction, out hit, direction.magnitude, ropeLayers))
+        finalPoint = FutureCollisionCheck(finalPoint, ropeRadious, ropeLayers);
+        finalPoint = CloseCollisionCheck(finalPoint, ropeRadious, ropeLayers);
+        
+        if(finalPoint != position)
         {
-            Plane temporalPlane = new Plane(hit.normal, hit.point+hit.normal*ropeRadious);
-            finalPoint = temporalPlane.ClosestPointOnPlane(finalPoint);
+            position = finalPoint;
+            Vector3 direction = finalPoint-previousPosition;
+            previousPosition = finalPoint + direction*(1-groundFriction);
         }
-        direction = finalPoint-startingPoint;
-        RaycastHit nonAll;
-        if(Physics.SphereCast(startingPoint, ropeRadious*0.8f, direction, out nonAll, direction.magnitude, ropeLayers))
-            finalPoint = hit.point+hit.normal*ropeRadious;
+    }
+    private void InsideCollisionCheck(float ropeRadious, LayerMask ropeLayers)
+    {
+        Collider[] collidersInside = Physics.OverlapSphere(previousPosition, ropeRadious, ropeLayers);
+        if(collidersInside.Length> 0)
+        {
+            for(int i = 0; i < collidersInside.Length; i++)
+            {
+                Rigidbody rb = collidersInside[i].GetComponent<Rigidbody>();
+                if(rb)                    
+                    previousPosition += rb.velocity*Time.deltaTime;                
+            }
+        }
+    }
+    private Vector3 CloseCollisionCheck(Vector3 finalPoint, float ropeRadious, LayerMask ropeLayers)
+    {
+        //Handles half Inside an object
         Collider[] colliders = Physics.OverlapSphere(finalPoint, ropeRadious, ropeLayers);
         if(colliders.Length > 0)
         {
@@ -48,30 +64,38 @@ public class PointSim
                 finalPoint += directionColl.normalized*(ropeRadious-directionColl.magnitude);
             }
         }
-
-        if(finalPoint != position)
-        {
-            Vector3 newDirection = startingPoint-finalPoint;
-            position = finalPoint;
-            previousPosition = finalPoint + (startingPoint-finalPoint)*(1-groundFriction);
-        }
+        return finalPoint;
     }
-    private Vector3 CollisionCheck(Vector3 startingPoint, Vector3 endingPoint)
-    {
+    private Vector3 FutureCollisionCheck(Vector3 finalPoint, float ropeRadious, LayerMask ropeLayers)
+    {        
+        //Handles outside an object but will be
         RaycastHit hit;
-        Vector3 direction = endingPoint-startingPoint;
-        if(Physics.SphereCast(startingPoint, 0.9f, direction, out hit, direction.magnitude+0.2f))
-        {
-            return hit.point-direction.normalized*0.19f;
+        Vector3 direction = finalPoint-previousPosition;
+        bool foundCollision;
+        int tries = 10;
+        do{
+            direction = finalPoint-previousPosition;
+            foundCollision = Physics.SphereCast(previousPosition, ropeRadious*0.9f, direction, out hit, direction.magnitude, ropeLayers);
+            if(foundCollision)
+            {
+                Plane temporalPlane = new Plane(hit.normal, hit.point+hit.normal*ropeRadious);
+                if(tries < 10)
+                    finalPoint = hit.point+hit.normal*ropeRadious*0.5f;
+                else
+                    finalPoint = temporalPlane.ClosestPointOnPlane(finalPoint);
+
+            }
+            tries--;
         }
-        return endingPoint;
+        while(foundCollision && tries > 0);
+        return finalPoint;
     }
     public void UpdatePhysics(Vector3 gravity, float airFriction)
     {
-        if(staticPoint)
-            return;
         Vector3 existingPrevious = previousPosition;
         previousPosition = position;
+        if(staticPoint)
+            return;
         Vector3 movedPoint = position + gravity*Time.fixedDeltaTime + (position-existingPrevious)*airFriction;
         position = movedPoint;
     }
