@@ -9,7 +9,8 @@ public class PointSim
     Vector3 previousPosition;
     Vector3 futurePosition;
 
-    [SerializeField] bool staticPoint;
+    bool staticPoint{set{storedValue = value;} get{return rb != null? rb.isKinematic:storedValue;;}}
+    bool storedValue = true;
     [SerializeField] Transform transform;
     [SerializeField] Rigidbody rb;
 
@@ -37,7 +38,7 @@ public class PointSim
     {
         this.position = copiedPoint.position;
         this.previousPosition = copiedPoint.previousPosition;
-        this.staticPoint = copiedPoint.staticPoint;
+        this.storedValue = copiedPoint.storedValue;
         this.futurePosition = copiedPoint.futurePosition;
         this.transform = copiedPoint.transform;
         this.rb = copiedPoint.rb;
@@ -48,7 +49,6 @@ public class PointSim
         this.previousPosition = position;
         this.transform = transform;
         this.rb = transform.GetComponent<Rigidbody>();
-        this.staticPoint = rb != null? rb.isKinematic:true;
         this.futurePosition = position;
     }
     public Vector3 getPosition(){return position;}
@@ -172,7 +172,7 @@ public class PointSim
         {
             if(rb != null)
             {
-                rb.AddForceAtPosition(addition/2, position);
+                rb.AddForceAtPosition(addition/2, position, ForceMode.Impulse);
             }
             this.position += addition/2;
         }
