@@ -60,4 +60,12 @@ public class SegmentSim
         }
         return current;
     }
+    public void Visualize()
+    {
+        Debug.DrawLine(startingPoint.getPosition(), endingPoint.getPosition(), Color.red);
+    }
+        public void VisualizeFuture()
+    {
+        Debug.DrawLine(startingPoint.getFuturePosition(), endingPoint.getFuturePosition(), Color.blue);
+    }
 }

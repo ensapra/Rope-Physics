@@ -15,6 +15,7 @@ public class PointSim
         this.position = position;
         this.staticPoint = staticPoint;
         this.previousPosition = position;
+        this.futurePosition = position;
     }
     public void setStatic(bool staticPoint)
     {this.staticPoint = staticPoint;}
@@ -24,6 +25,7 @@ public class PointSim
         this.position = originalPoint.getPosition();
         this.previousPosition = originalPoint.previousPosition;
         this.staticPoint = originalPoint.isStatic();
+        this.futurePosition = originalPoint.getFuturePosition();
     }
     public void CollisionCheck(float ropeRadious, LayerMask ropeLayers, float groundFriction)
     {
@@ -105,6 +107,7 @@ public class PointSim
     public void UpdatePosition(Vector3 position)
     {
         this.position = position;
+        this.futurePosition = position;
     }
     public void ConstrainFuture(Vector3 addition)
     {
