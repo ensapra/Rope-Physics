@@ -18,6 +18,8 @@ public class RopeSim : MonoBehaviour
     public float groundFriction;
     public LayerMask collisionLayer;
     private LineRenderer lineRenderer;
+    public int maxAmountOfPoints = 100;
+    private float minDistane = 0.05f;
 
     // Start is called before the first frame update
     void Start()
@@ -42,6 +44,8 @@ public class RopeSim : MonoBehaviour
     }
     private void CreateNewSegments()
     {
+        if(maximumDistance < minDistane)
+            maximumDistance = minDistane;
         int amountOfSegments = (int)(ropeLength/maximumDistance);
         int segmentDifference = amountOfSegments-currentSegments.Count;
         if(segmentDifference < 0)
@@ -63,6 +67,8 @@ public class RopeSim : MonoBehaviour
     {
         //Modify correctly initial segment
         SegmentSim intialSegment;
+        if(amount > maxAmountOfPoints)
+            amount = maxAmountOfPoints;
         intialSegment = currentSegments[0];
         PointSim originalStartingPoint = intialSegment.startingPoint;
         PointSim previousCopy = new PointSim(originalStartingPoint);
@@ -118,7 +124,7 @@ public class RopeSim : MonoBehaviour
             currentSegments[i].VisualizeFuture();
             currentSegments[i].Visualize();
         }
-        
+
         //Third single pass will add velocity to the rigidbodies in contact
 /*         for(int z = 0; z < maximumIterations; z++)
         {
