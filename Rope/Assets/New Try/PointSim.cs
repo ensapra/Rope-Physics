@@ -170,6 +170,7 @@ public class PointSim
     {
         if(!staticPoint)
         {
+            //Falta eliminar si la distancia es masa gran
             if(rb != null)
             {
                 rb.AddForceAtPosition(addition/2, position, ForceMode.Impulse);
