@@ -63,11 +63,11 @@ public class SegmentSim
     public void Visualize()
     {
         Debug.DrawLine(startingPoint.getPosition(), endingPoint.getPosition(), Color.red);
-        Debug.DrawRay(startingPoint.getPosition(), Vectpr3.up, Color.green);
+        Debug.DrawRay(startingPoint.getPosition(), Vector3.up, Color.green);
     }
     public void VisualizeFuture()
     {
         Debug.DrawLine(startingPoint.getFuturePosition(), endingPoint.getFuturePosition(), Color.blue);
-        Debug.DrawRay(startingPoint.getFuturePosition(), Vectpr3.up, Color.green);
+        Debug.DrawRay(startingPoint.getFuturePosition(), Vector3.up, Color.green);
     }
 }
