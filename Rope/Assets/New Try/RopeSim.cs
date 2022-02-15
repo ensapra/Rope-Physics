@@ -26,8 +26,8 @@ public class RopeSim : MonoBehaviour
     {
         if(startingPoint != null && endingPoint != null)
         {
-            PointSim startingPointSim = new PointSim(startingPoint.position, true);
-            PointSim endingPositionSim = new PointSim(endingPoint.position, true);
+            PointSim startingPointSim = new PointSim(startingPoint);
+            PointSim endingPositionSim = new PointSim(endingPoint);
             SegmentSim baseSegment = new SegmentSim(startingPointSim, endingPositionSim);
             currentSegments.Add(baseSegment);
         }
@@ -61,7 +61,7 @@ public class RopeSim : MonoBehaviour
         {
             currentSegments.RemoveAt(0);
         }
-        currentSegments[0].startingPoint.setStatic(originalStarting.isStatic());
+        currentSegments[0].startingPoint.RepurposeObject(originalStarting);
     }
     private void AddSegments(int amount)
     {
@@ -72,7 +72,7 @@ public class RopeSim : MonoBehaviour
         intialSegment = currentSegments[0];
         PointSim originalStartingPoint = intialSegment.startingPoint;
         PointSim previousCopy = new PointSim(originalStartingPoint);
-        originalStartingPoint.setStatic(false);
+        originalStartingPoint.RepurposeObject(new PointSim(originalStartingPoint.getPosition(), false));
         for(int i = 0; i < amount-1; i++)
         {
             PointSim currentCopy = new PointSim(originalStartingPoint);
@@ -86,10 +86,10 @@ public class RopeSim : MonoBehaviour
     private void UpdateStartAndEnd()
     {
         if(startingPoint != null)
-            currentSegments[0].startingPoint.UpdatePosition(startingPoint.position);
+            currentSegments[0].startingPoint.UpdatePosition();
 
         if(endingPoint != null)
-            currentSegments[currentSegments.Count-1].endingPoint.UpdatePosition(endingPoint.position);
+            currentSegments[currentSegments.Count-1].endingPoint.UpdatePosition();
     }
     private void SimulateSegments()
     {
@@ -116,6 +116,8 @@ public class RopeSim : MonoBehaviour
                 SegmentSim selected = currentSegments[i];
                 selected.ConstrainRope(maximumDistance);
                 selected.CollisionCheck(ropeRadious,collisionLayer, groundFriction);
+                if(z == maximumIterations/2-1)
+                    selected.ApplyForces(collisionLayer);
             }
         }
 
@@ -124,24 +126,6 @@ public class RopeSim : MonoBehaviour
             currentSegments[i].VisualizeFuture();
             currentSegments[i].Visualize();
         }
-
-        //Third single pass will add velocity to the rigidbodies in contact
-/*         for(int z = 0; z < maximumIterations; z++)
-        {
-            for(int i = 0; i< currentSegments.Count; i++)
-            {
-                if(z == 0 && i+1 < currentSegments.Count)
-                {
-                    if(i == 0)
-                        currentSegments[i].AddPhysics(Vector3.down*ropeGravity,ropeFlexibility);
-                    currentSegments[i+1].AddPhysics(Vector3.down*ropeGravity,ropeFlexibility);
-                }
-                currentSegments[i].ConstrainRope(maximumDistance);
-                if(z == maximumIterations-1)
-                    currentSegments[i].CollisionCheck(ropeRadious,collisionLayer, groundFriction);
-            }
-        } */
-        //also for the ending point required to do
     }
     private void Visualize()
     {

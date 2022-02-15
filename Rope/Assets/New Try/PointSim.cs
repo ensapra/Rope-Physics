@@ -10,25 +10,52 @@ public class PointSim
     Vector3 futurePosition;
 
     [SerializeField] bool staticPoint;
+    [SerializeField] Transform transform;
+    [SerializeField] Rigidbody rb;
+
+    bool insideObject;
+
+    //Simplificar les creacions de punts
     public PointSim(Vector3 position, bool staticPoint)
     {
         this.position = position;
         this.staticPoint = staticPoint;
         this.previousPosition = position;
         this.futurePosition = position;
+        this.transform = null;
+        this.rb = null;
     }
-    public void setStatic(bool staticPoint)
-    {this.staticPoint = staticPoint;}
-    public bool isStatic(){return staticPoint;}
+    public PointSim(Transform transform)
+    {
+        RepurposeObject(transform);
+    }
     public PointSim(PointSim originalPoint)
     {
-        this.position = originalPoint.getPosition();
-        this.previousPosition = originalPoint.previousPosition;
-        this.staticPoint = originalPoint.isStatic();
-        this.futurePosition = originalPoint.getFuturePosition();
+        RepurposeObject(originalPoint);
     }
+    public void RepurposeObject(PointSim copiedPoint)
+    {
+        this.position = copiedPoint.position;
+        this.previousPosition = copiedPoint.previousPosition;
+        this.staticPoint = copiedPoint.staticPoint;
+        this.futurePosition = copiedPoint.futurePosition;
+        this.transform = copiedPoint.transform;
+        this.rb = copiedPoint.rb;
+    }
+    public void RepurposeObject(Transform transform)
+    {
+        this.position = transform.position;
+        this.previousPosition = position;
+        this.transform = transform;
+        this.rb = transform.GetComponent<Rigidbody>();
+        this.staticPoint = rb != null? rb.isKinematic:true;
+        this.futurePosition = position;
+    }
+    public Vector3 getPosition(){return position;}
+    public Vector3 getFuturePosition(){return futurePosition;}
     public void CollisionCheck(float ropeRadious, LayerMask ropeLayers, float groundFriction)
     {
+        insideObject = false;
         InsideCollisionCheck(ropeRadious, ropeLayers);
         Vector3 finalPoint = position;
         finalPoint = FutureCollisionCheck(finalPoint, ropeRadious, ropeLayers);
@@ -50,7 +77,9 @@ public class PointSim
             {
                 Rigidbody rb = collidersInside[i].GetComponent<Rigidbody>();
                 if(rb)                    
-                    previousPosition += rb.velocity*Time.deltaTime;                
+                    previousPosition += rb.velocity*Time.deltaTime;
+                else
+                    insideObject = true;                
             }
         }
     }
@@ -93,6 +122,26 @@ public class PointSim
         while(foundCollision && tries > 0);
         return finalPoint;
     }
+
+    public void ApplyForcesToRigidbodies(LayerMask ropeLayers)
+    {
+        if(insideObject)
+            return;
+        RaycastHit hit;
+        Vector3 direction = futurePosition-position;
+        if(Physics.Raycast(position, direction, out hit, direction.magnitude, ropeLayers))
+        {
+            if(hit.collider)
+            {
+                Rigidbody rb = hit.collider.GetComponent<Rigidbody>();
+                if(rb != null)
+                {
+                    Vector3 finalPosition = hit.collider.ClosestPoint(position);
+                    rb.AddForceAtPosition(direction, finalPosition);
+                }   
+            }
+        }
+    }
     public void UpdatePhysics(Vector3 gravity, float airFriction)
     {
         futurePosition = position;
@@ -104,10 +153,13 @@ public class PointSim
         position = movedPoint;
         futurePosition = movedPoint;
     }
-    public void UpdatePosition(Vector3 position)
+    public void UpdatePosition()
     {
-        this.position = position;
-        this.futurePosition = position;
+        if(transform != null)
+        {
+            this.position = transform.position;
+            this.futurePosition = transform.position;
+        }
     }
     public void ConstrainFuture(Vector3 addition)
     {
@@ -117,15 +169,12 @@ public class PointSim
     public void ConstrainPosition(Vector3 addition)
     {
         if(!staticPoint)
+        {
+            if(rb != null)
+            {
+                rb.AddForceAtPosition(addition/2, position);
+            }
             this.position += addition/2;
+        }
     }
-    public Vector3 getPosition()
-    {
-        return position;
-    }
-    public Vector3 getFuturePosition()
-    {
-        return futurePosition;
-    }
-
 }

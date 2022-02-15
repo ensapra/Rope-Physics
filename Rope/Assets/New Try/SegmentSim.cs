@@ -17,6 +17,10 @@ public class SegmentSim
     {
         startingPoint.UpdatePhysics(gravity, airFriction);
     }
+    public void ApplyForces(LayerMask ropeLayers)
+    {
+        startingPoint.ApplyForcesToRigidbodies(ropeLayers);
+    }
     public void ConstrainRope(float maximumDistance)
     {
         Vector3 starting = startingPoint.getPosition();
