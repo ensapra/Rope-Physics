@@ -118,6 +118,7 @@ public class RopeSim : MonoBehaviour
             currentSegments[i].VisualizeFuture();
             currentSegments[i].Visualize();
         }
+        
         //Third single pass will add velocity to the rigidbodies in contact
 /*         for(int z = 0; z < maximumIterations; z++)
         {
