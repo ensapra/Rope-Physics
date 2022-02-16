@@ -24,7 +24,8 @@ public class RopeSim : MonoBehaviour
     public float maxTension;
     public float currentTension;
     public Vector2 distanceMinMax = new Vector2(0,1);
-
+    public int VisualizeIteration = -1;
+    public bool overallDebug;
     // Start is called before the first frame update
     void Start()
     {
@@ -121,10 +122,10 @@ public class RopeSim : MonoBehaviour
                     if(i+1 == segmentsCount-1)
                          currentSegments[i+1].endingPoint.UpdatePhysics(Vector3.down*ropeGravity,ropeFlexibility);
                 }
-                if(i == 0)
+/*                 if(i == 0)
                     selected.ConstrainRopeFuture(distanceEdges, 0);
                 else
-                    selected.ConstrainRopeFuture(distanceMinMax.y-extraDistance, distanceMinMax.x);
+                    selected.ConstrainRopeFuture(distanceMinMax.y, distanceMinMax.x); */
             }
         }
         //Second pass will set the rope taking into account collisions
@@ -137,7 +138,7 @@ public class RopeSim : MonoBehaviour
                     selected.ConstrainRope(distanceEdges, 0);
                 else
                     selected.ConstrainRope(distanceMinMax.y-extraDistance, distanceMinMax.x);
-                
+                //ISSUE WITH EXTRA DISTANCE
                 selected.CollisionCheck(ropeRadious,collisionLayer, groundFriction);
                 if(i == segmentsCount-1)
                     selected.endingPoint.CollisionCheck(ropeRadious, collisionLayer, groundFriction);
@@ -146,13 +147,20 @@ public class RopeSim : MonoBehaviour
                     selected.ApplyForces(collisionLayer);
                 if(i==segmentsCount-1)
                     selected.endingPoint.ApplyForcesToRigidbodies(collisionLayer);
+                if(z == VisualizeIteration)
+                {
+                    Debug.DrawLine(selected.startingPoint.getPosition(), selected.endingPoint.getPosition(), Color.yellow);
+                }
             }
         }
 
-        for(int i = 0; i < currentSegments.Count; i++)
+        if(overallDebug)
         {
-            currentSegments[i].VisualizeFuture();
-            currentSegments[i].Visualize();
+            for(int i = 0; i < currentSegments.Count; i++)
+            {
+                //currentSegments[i].VisualizeFuture();
+                currentSegments[i].Visualize();
+            }
         }
     }
     private void Visualize()

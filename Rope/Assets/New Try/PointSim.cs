@@ -9,9 +9,11 @@ public class PointSim
     Vector3 previousPosition;
     Vector3 futurePosition;
     Vector3 offset;
-    bool staticPoint{get{return rb != null? rb.isKinematic: this.transform != null ? true:false;;}}
+    bool staticPoint{get{return rb != null? rb.isKinematic: this.transform != null ? true:storedStatic;;}}
+    [SerializeField] bool storedStatic = false;
     [SerializeField] Transform transform;
     [SerializeField] Rigidbody rb;
+    [SerializeField] bool Visualize = false;
 
     bool insideObject;
 
@@ -23,6 +25,7 @@ public class PointSim
         this.futurePosition = position;
         this.transform = null;
         this.rb = null;
+        this.storedStatic = false;
     }
     public PointSim(Transform transform, Vector3 offset)
     {
@@ -38,6 +41,7 @@ public class PointSim
         this.previousPosition = copiedPoint.previousPosition;
         this.futurePosition = copiedPoint.futurePosition;
         this.transform = copiedPoint.transform;
+        this.storedStatic = copiedPoint.storedStatic;
         this.rb = copiedPoint.rb;
     }
     public void RepurposeObject(Transform transform, Vector3 offset)
@@ -47,6 +51,7 @@ public class PointSim
         this.previousPosition = position;
         this.transform = transform;
         this.rb = transform.GetComponent<Rigidbody>();
+        this.storedStatic = false;
         this.futurePosition = position;
     }
     public Vector3 getPosition(){return position;}
@@ -75,9 +80,7 @@ public class PointSim
             {
                 Rigidbody rb = collidersInside[i].GetComponent<Rigidbody>();
                 if(rb)                    
-                    previousPosition += rb.velocity*Time.deltaTime;
-                else
-                    insideObject = true;                
+                    previousPosition += rb.velocity*Time.deltaTime;                
             }
         }
     }
@@ -90,6 +93,8 @@ public class PointSim
             for(int i = 0; i < colliders.Length; i++)
             {
                 Vector3 collisionPoint = colliders[i].ClosestPoint(finalPoint);
+                if(collisionPoint == finalPoint)
+                    insideObject = true;
                 Vector3 directionColl = (finalPoint-collisionPoint);
                 finalPoint += directionColl.normalized*(ropeRadious-directionColl.magnitude);
             }
@@ -127,6 +132,8 @@ public class PointSim
             return;
         RaycastHit hit;
         Vector3 direction = futurePosition-position;
+        if(Visualize)
+            Debug.DrawRay(position, direction);
         if(Physics.Raycast(position, direction, out hit, direction.magnitude, ropeLayers))
         {
             if(hit.collider)
@@ -139,6 +146,8 @@ public class PointSim
                 }   
             }
         }
+        if(Visualize)
+            Debug.DrawRay(position, Vector3.up*2, Color.magenta);
     }
     public void UpdatePhysics(Vector3 gravity, float airFriction)
     {

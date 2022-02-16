@@ -2241,6 +2241,8 @@ MonoBehaviour:
   maxTension: 0
   currentTension: 0
   distanceMinMax: {x: 0, y: 1}
+  VisualizeIteration: -1
+  overallDebug: 0
   references:
     version: 1
 --- !u!4 &1178227405
@@ -2251,7 +2253,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1178227403}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -4.6, y: 8.42, z: 9.98}
+  m_LocalPosition: {x: 9.82, y: 3.35, z: 10.29}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 1659184691}
