@@ -21,7 +21,7 @@ public class SegmentSim
     {
         startingPoint.ApplyForcesToRigidbodies(ropeLayers);
     }
-    public void ConstrainRope(float maximumDistance)
+    public void ConstrainRope(float maximumDistance, float minimumDistance)
     {
         Vector3 starting = startingPoint.getPosition();
         Vector3 ending = endingPoint.getPosition();
@@ -33,8 +33,13 @@ public class SegmentSim
             startingPoint.ConstrainPosition((distance-maximumDistance)*(forwardDirection).normalized);  
             endingPoint.ConstrainPosition(-(distance-maximumDistance)*(forwardDirection).normalized); 
         }        
+        if(distance < minimumDistance)
+        {
+            startingPoint.ConstrainPosition((distance-minimumDistance)*(forwardDirection).normalized);  
+            endingPoint.ConstrainPosition(-(distance-minimumDistance)*(forwardDirection).normalized); 
+        }    
     }
-    public void ConstrainRopeFuture(float maximumDistance)
+    public void ConstrainRopeFuture(float maximumDistance, float minimumDistance)
     {
         Vector3 starting = startingPoint.getFuturePosition();
         Vector3 ending = endingPoint.getFuturePosition();
@@ -46,6 +51,11 @@ public class SegmentSim
             startingPoint.ConstrainFuture((distance-maximumDistance)*(forwardDirection).normalized);  
             endingPoint.ConstrainFuture(-(distance-maximumDistance)*(forwardDirection).normalized); 
         }        
+        if(distance < minimumDistance)
+        {
+            startingPoint.ConstrainFuture((distance-minimumDistance)*(forwardDirection).normalized);  
+            endingPoint.ConstrainFuture(-(distance-minimumDistance)*(forwardDirection).normalized); 
+        }    
     }
     public void CollisionCheck(float ropeRadious, LayerMask ropeLayers, float groundFriction)
     {
@@ -53,7 +63,7 @@ public class SegmentSim
     }
     public float getCurrentLenght()
     {
-        return 1;
+        return (startingPoint.getPosition()-endingPoint.getPosition()).magnitude;
     }
     public List<Vector3> getPoints()
     {

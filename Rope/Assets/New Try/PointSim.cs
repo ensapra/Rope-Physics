@@ -8,9 +8,8 @@ public class PointSim
     [SerializeField] Vector3 position;
     Vector3 previousPosition;
     Vector3 futurePosition;
-
-    bool staticPoint{set{storedValue = value;} get{return rb != null? rb.isKinematic:storedValue;;}}
-    bool storedValue = true;
+    Vector3 offset;
+    bool staticPoint{get{return rb != null? rb.isKinematic: this.transform != null ? true:false;;}}
     [SerializeField] Transform transform;
     [SerializeField] Rigidbody rb;
 
@@ -20,15 +19,14 @@ public class PointSim
     public PointSim(Vector3 position, bool staticPoint)
     {
         this.position = position;
-        this.staticPoint = staticPoint;
         this.previousPosition = position;
         this.futurePosition = position;
         this.transform = null;
         this.rb = null;
     }
-    public PointSim(Transform transform)
+    public PointSim(Transform transform, Vector3 offset)
     {
-        RepurposeObject(transform);
+        RepurposeObject(transform, offset);
     }
     public PointSim(PointSim originalPoint)
     {
@@ -38,14 +36,14 @@ public class PointSim
     {
         this.position = copiedPoint.position;
         this.previousPosition = copiedPoint.previousPosition;
-        this.storedValue = copiedPoint.storedValue;
         this.futurePosition = copiedPoint.futurePosition;
         this.transform = copiedPoint.transform;
         this.rb = copiedPoint.rb;
     }
-    public void RepurposeObject(Transform transform)
+    public void RepurposeObject(Transform transform, Vector3 offset)
     {
-        this.position = transform.position;
+        this.position = transform.position+transform.TransformDirection(offset);
+        this.offset = offset;
         this.previousPosition = position;
         this.transform = transform;
         this.rb = transform.GetComponent<Rigidbody>();
@@ -147,18 +145,27 @@ public class PointSim
         futurePosition = position;
         Vector3 existingPrevious = previousPosition;
         previousPosition = position;
-        if(staticPoint)
+        if(staticPoint || rb != null)
             return;
         Vector3 movedPoint = position + gravity*Time.fixedDeltaTime + (position-existingPrevious)*airFriction;
         position = movedPoint;
         futurePosition = movedPoint;
     }
-    public void UpdatePosition()
+    public void UpdatePosition(Transform desiredTransform, Vector3 offset)
     {
+        if(this.transform != desiredTransform)
+        {
+            this.transform = desiredTransform;
+            if(transform != null)
+                this.rb = transform.GetComponent<Rigidbody>();
+            else
+                this.rb = null;
+        }
         if(transform != null)
         {
-            this.position = transform.position;
-            this.futurePosition = transform.position;
+            this.offset = offset;
+            this.position = transform.position+transform.TransformDirection(offset);
+            this.futurePosition = this.position;
         }
     }
     public void ConstrainFuture(Vector3 addition)
@@ -173,9 +180,10 @@ public class PointSim
             //Falta eliminar si la distancia es masa gran
             if(rb != null)
             {
-                rb.AddForceAtPosition(addition/2, position, ForceMode.Impulse);
+                rb.AddForceAtPosition(addition, transform.position+transform.TransformDirection(offset), ForceMode.Impulse);
             }
-            this.position += addition/2;
+            else
+                this.position += addition/2;
         }
     }
 }
