@@ -122,10 +122,10 @@ public class RopeSim : MonoBehaviour
                     if(i+1 == segmentsCount-1)
                          currentSegments[i+1].endingPoint.UpdatePhysics(Vector3.down*ropeGravity,ropeFlexibility);
                 }
-/*                 if(i == 0)
+                if(i == 0)
                     selected.ConstrainRopeFuture(distanceEdges, 0);
                 else
-                    selected.ConstrainRopeFuture(distanceMinMax.y, distanceMinMax.x); */
+                    selected.ConstrainRopeFuture(distanceMinMax.y-extraDistance, distanceMinMax.x);
             }
         }
         //Second pass will set the rope taking into account collisions
@@ -158,7 +158,7 @@ public class RopeSim : MonoBehaviour
         {
             for(int i = 0; i < currentSegments.Count; i++)
             {
-                //currentSegments[i].VisualizeFuture();
+                currentSegments[i].VisualizeFuture();
                 currentSegments[i].Visualize();
             }
         }

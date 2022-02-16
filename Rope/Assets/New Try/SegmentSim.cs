@@ -63,7 +63,7 @@ public class SegmentSim
     }
     public float getCurrentLenght()
     {
-        return (startingPoint.getPosition()-endingPoint.getPosition()).magnitude;
+        return (startingPoint.getFuturePosition()-endingPoint.getFuturePosition()).magnitude;
     }
     public List<Vector3> getPoints()
     {
