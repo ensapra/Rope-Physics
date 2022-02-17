@@ -188,7 +188,7 @@ public class RopeSim : MonoBehaviour
         else
             segment.ConstrainRope(distanceMinMax.y-extraDistance, distanceMinMax.x);
         segment.CollisionCheck(ropeRadious,collisionLayer, groundFriction);
-        if(z == maximumIterations/2-1)
+        if(z == maximumIterations/4-1)
             segment.ApplyForces(collisionLayer);
         if(i==segmentsCount-1)
             segment.endingPoint.ApplyForcesToRigidbodies(collisionLayer);
