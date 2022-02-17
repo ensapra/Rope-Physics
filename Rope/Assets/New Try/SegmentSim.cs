@@ -7,6 +7,8 @@ public class SegmentSim
 {
     [SerializeReference] public PointSim startingPoint;
     [SerializeReference] public PointSim endingPoint;
+    public float segmentTension;
+    public float currentAcomulatedTension;
     public List<PointSim> inbetweenPoints = new List<PointSim>();
     public SegmentSim(PointSim startingPoint, PointSim endingPoint)
     {
@@ -20,6 +22,18 @@ public class SegmentSim
     public void ApplyForces(LayerMask ropeLayers)
     {
         startingPoint.ApplyForcesToRigidbodies(ropeLayers);
+    }
+    public bool breakRope(float maxTension, float maxAcomulatedTension)
+    {
+        if(segmentTension > maxTension)
+            currentAcomulatedTension += segmentTension*0.1f;
+        else
+            currentAcomulatedTension = 0;
+
+        if(currentAcomulatedTension > maxAcomulatedTension)
+            return true;
+        else
+            return false;
     }
     public void ConstrainRope(float maximumDistance, float minimumDistance)
     {
@@ -62,9 +76,11 @@ public class SegmentSim
         startingPoint.CollisionCheck(ropeRadious, ropeLayers, groundFriction);
         endingPoint.CollisionCheck(ropeRadious, ropeLayers, groundFriction);
     }
-    public float getCurrentLenght()
+    public float getCurrentLenght(float maxDistance)
     {
-        return (startingPoint.getFuturePosition()-endingPoint.getFuturePosition()).magnitude;
+        float distance = (startingPoint.getFuturePosition()-endingPoint.getFuturePosition()).magnitude;
+        segmentTension = (distance/maxDistance)-1;
+        return distance;
     }
     public List<Vector3> getPoints()
     {

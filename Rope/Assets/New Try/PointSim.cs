@@ -115,7 +115,7 @@ public class PointSim
             {
                 Plane temporalPlane = new Plane(hit.normal, hit.point+hit.normal*ropeRadious);
                 if(tries < 10)
-                    finalPoint = hit.point+hit.normal*ropeRadious*0.5f;
+                    finalPoint = hit.point+/*direction.normalized*ropeRadious*0.5f;*/hit.normal*ropeRadious*0.5f;
                 else
                     finalPoint = temporalPlane.ClosestPointOnPlane(finalPoint);
 

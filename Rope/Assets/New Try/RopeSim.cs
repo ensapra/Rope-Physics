@@ -22,10 +22,14 @@ public class RopeSim : MonoBehaviour
     public int maxAmountOfPoints = 100;
     private float minmaxDistaneAccepted = 0.02f;
     public float maxTension;
+    public float maxAcomulatedTension;
     public float currentTension;
     public Vector2 distanceMinMax = new Vector2(0,1);
     public int VisualizeIteration = -1;
     public bool overallDebug;
+    private float delay;
+    private bool justBroke;
+    public bool canBreak;
     // Start is called before the first frame update
     void Start()
     {
@@ -42,7 +46,48 @@ public class RopeSim : MonoBehaviour
         UpdateStartAndEnd();
         CreateNewSegments();
         SimulateSegments();
+        if(canBreak)
+            CheckBreakPoints();
         Visualize();
+    }
+    public void CheckBreakPoints()
+    {
+        if(justBroke)
+        {
+            delay += Time.deltaTime;
+            if(delay < 2f)
+                return;
+            else
+            {
+                delay = 0;
+                justBroke = false;
+            }
+        }
+        int breakingPoints = -1;
+        int brokenPoints = 0;
+        for(int i = 0; i < currentSegments.Count; i++)
+        {
+            SegmentSim segmentSim = currentSegments[i];
+            if(segmentSim.breakRope(maxTension, maxAcomulatedTension))
+            {
+                breakingPoints += i;
+                brokenPoints++;
+            }
+        }
+        if(breakingPoints != -1)
+            BreakRope((int)breakingPoints/brokenPoints);
+    }
+    private void BreakRope(int placeOfBreak)
+    {
+        this.justBroke = true;
+        GameObject newRope = Instantiate(this.gameObject);
+        RopeSim newRopeSim = newRope.GetComponent<RopeSim>();
+        newRopeSim.currentSegments = new List<SegmentSim>();
+        newRopeSim.startingPoint = null;
+        newRopeSim.ropeLength = ropeLength-placeOfBreak*distanceMinMax.y;
+        this.endingPoint = null;
+        this.ropeLength = placeOfBreak*distanceMinMax.y;
+
     }
     private void CreateNewSegments()
     {
@@ -62,7 +107,7 @@ public class RopeSim : MonoBehaviour
         float Lenght = 0;
         foreach(SegmentSim segment in currentSegments)
         {
-            Lenght += segment.getCurrentLenght();
+            Lenght += segment.getCurrentLenght(distanceMinMax.y);
         }
         return Lenght;
     }
@@ -138,7 +183,7 @@ public class RopeSim : MonoBehaviour
                 SegmentSimulation(selected, i, extraDistance, distanceEdges, z, segmentsCount);
             }  */
             //Full two way
-/*             for(int i = 0; i< segmentsCount; i++)
+            for(int i = 0; i< segmentsCount; i++)
             {
                 SegmentSim selected = currentSegments[i];
                 SegmentSimulation(selected, i, extraDistance, distanceEdges, z, segmentsCount);
@@ -147,7 +192,7 @@ public class RopeSim : MonoBehaviour
             {
                 SegmentSim selected = currentSegments[i];
                 SegmentSimulation(selected, i, extraDistance, distanceEdges, z, segmentsCount);
-            }  */
+            } 
 //Center to extremes
 /*             for(int i = segmentsCount/2; i< segmentsCount; i++)
             {
@@ -160,7 +205,7 @@ public class RopeSim : MonoBehaviour
                 SegmentSimulation(selected, i, extraDistance, distanceEdges, z, segmentsCount);
             }  */
             //Extremes to center (Looks better than the others, without weird vibrations)
-             for(int i = 0; i< segmentsCount/2; i++)
+/*              for(int i = 0; i< segmentsCount/2; i++)
             {
                 SegmentSim selected = currentSegments[i];
                 SegmentSimulation(selected, i, extraDistance, distanceEdges, z, segmentsCount);
@@ -169,7 +214,7 @@ public class RopeSim : MonoBehaviour
             {
                 SegmentSim selected = currentSegments[i];
                 SegmentSimulation(selected, i, extraDistance, distanceEdges, z, segmentsCount);
-            }  
+            }   */
         }
 
         if(overallDebug)
