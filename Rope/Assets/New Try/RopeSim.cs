@@ -129,29 +129,47 @@ public class RopeSim : MonoBehaviour
             }
         }
         //Second pass will set the rope taking into account collisions
-        for(int z = 0; z < maximumIterations/2; z++)
+        for(int z = 0; z < maximumIterations/4; z++)
         {
+/*             //Single pass
             for(int i = 0; i< segmentsCount; i++)
             {
                 SegmentSim selected = currentSegments[i];
-                if(i == 0)
-                    selected.ConstrainRope(distanceEdges, 0);
-                else
-                    selected.ConstrainRope(distanceMinMax.y-extraDistance, distanceMinMax.x);
-                //ISSUE WITH EXTRA DISTANCE
-                selected.CollisionCheck(ropeRadious,collisionLayer, groundFriction);
-                if(i == segmentsCount-1)
-                    selected.endingPoint.CollisionCheck(ropeRadious, collisionLayer, groundFriction);
-                
-                if(z == maximumIterations/2-1)
-                    selected.ApplyForces(collisionLayer);
-                if(i==segmentsCount-1)
-                    selected.endingPoint.ApplyForcesToRigidbodies(collisionLayer);
-                if(z == VisualizeIteration)
-                {
-                    Debug.DrawLine(selected.startingPoint.getPosition(), selected.endingPoint.getPosition(), Color.yellow);
-                }
-            }
+                SegmentSimulation(selected, i, extraDistance, distanceEdges, z, segmentsCount);
+            }  */
+            //Full two way
+/*             for(int i = 0; i< segmentsCount; i++)
+            {
+                SegmentSim selected = currentSegments[i];
+                SegmentSimulation(selected, i, extraDistance, distanceEdges, z, segmentsCount);
+            } 
+            for(int i = segmentsCount-1; i>= 0; i--)
+            {
+                SegmentSim selected = currentSegments[i];
+                SegmentSimulation(selected, i, extraDistance, distanceEdges, z, segmentsCount);
+            }  */
+//Center to extremes
+/*             for(int i = segmentsCount/2; i< segmentsCount; i++)
+            {
+                SegmentSim selected = currentSegments[i];
+                SegmentSimulation(selected, i, extraDistance, distanceEdges, z, segmentsCount);
+            } 
+            for(int i = segmentsCount/2; i>= 0; i--)
+            {
+                SegmentSim selected = currentSegments[i];
+                SegmentSimulation(selected, i, extraDistance, distanceEdges, z, segmentsCount);
+            }  */
+            //Extremes to center (Looks better than the others, without weird vibrations)
+             for(int i = 0; i< segmentsCount/2; i++)
+            {
+                SegmentSim selected = currentSegments[i];
+                SegmentSimulation(selected, i, extraDistance, distanceEdges, z, segmentsCount);
+            } 
+            for(int i = segmentsCount-1; i>= segmentsCount/2; i--)
+            {
+                SegmentSim selected = currentSegments[i];
+                SegmentSimulation(selected, i, extraDistance, distanceEdges, z, segmentsCount);
+            }  
         }
 
         if(overallDebug)
@@ -161,6 +179,22 @@ public class RopeSim : MonoBehaviour
                 currentSegments[i].VisualizeFuture();
                 currentSegments[i].Visualize();
             }
+        }
+    }
+    private void SegmentSimulation(SegmentSim segment, int i, float extraDistance, float distanceEdges, int z, int segmentsCount)
+    {
+        if(i == 0)
+            segment.ConstrainRope(distanceEdges, 0);
+        else
+            segment.ConstrainRope(distanceMinMax.y-extraDistance, distanceMinMax.x);
+        segment.CollisionCheck(ropeRadious,collisionLayer, groundFriction);
+        if(z == maximumIterations/2-1)
+            segment.ApplyForces(collisionLayer);
+        if(i==segmentsCount-1)
+            segment.endingPoint.ApplyForcesToRigidbodies(collisionLayer);
+        if(z == VisualizeIteration)
+        {
+            Debug.DrawLine(segment.startingPoint.getPosition(), segment.endingPoint.getPosition(), Color.yellow);
         }
     }
     private void Visualize()

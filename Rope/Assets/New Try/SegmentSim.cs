@@ -60,6 +60,7 @@ public class SegmentSim
     public void CollisionCheck(float ropeRadious, LayerMask ropeLayers, float groundFriction)
     {
         startingPoint.CollisionCheck(ropeRadious, ropeLayers, groundFriction);
+        endingPoint.CollisionCheck(ropeRadious, ropeLayers, groundFriction);
     }
     public float getCurrentLenght()
     {
