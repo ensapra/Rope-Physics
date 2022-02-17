@@ -30,6 +30,7 @@ public class RopeSim : MonoBehaviour
     private float delay;
     private bool justBroke;
     public bool canBreak;
+    public RopeSim attachRope;
     // Start is called before the first frame update
     void Start()
     {
@@ -48,7 +49,19 @@ public class RopeSim : MonoBehaviour
         SimulateSegments();
         if(canBreak)
             CheckBreakPoints();
+        CheckAttachment();
         Visualize();
+    }
+    public void CheckAttachment()
+    {
+        if(attachRope != null)
+        {
+            this.ropeLength += attachRope.ropeLength;
+            this.endingPoint = attachRope.endingPoint;
+            this.endingOffset = attachRope.endingOffset;
+            Destroy(attachRope.gameObject);
+            attachRope = null;
+        }
     }
     public void CheckBreakPoints()
     {
