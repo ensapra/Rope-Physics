@@ -189,14 +189,14 @@ public class RopeSim : MonoBehaviour
         //Second pass will set the rope taking into account collisions
         for(int z = 0; z < maximumIterations/4; z++)
         {
-/*             //Single pass
+            //Single pass
             for(int i = 0; i< segmentsCount; i++)
             {
                 SegmentSim selected = currentSegments[i];
                 SegmentSimulation(selected, i, extraDistance, distanceEdges, z, segmentsCount);
-            }  */
+            } 
             //Full two way
-            for(int i = 0; i< segmentsCount; i++)
+/*             for(int i = 0; i< segmentsCount; i++)
             {
                 SegmentSim selected = currentSegments[i];
                 SegmentSimulation(selected, i, extraDistance, distanceEdges, z, segmentsCount);
@@ -205,7 +205,7 @@ public class RopeSim : MonoBehaviour
             {
                 SegmentSim selected = currentSegments[i];
                 SegmentSimulation(selected, i, extraDistance, distanceEdges, z, segmentsCount);
-            } 
+            }  */
 //Center to extremes
 /*             for(int i = segmentsCount/2; i< segmentsCount; i++)
             {
@@ -242,9 +242,9 @@ public class RopeSim : MonoBehaviour
     private void SegmentSimulation(SegmentSim segment, int i, float extraDistance, float distanceEdges, int z, int segmentsCount)
     {
         if(i == 0)
-            segment.ConstrainRope(distanceEdges, 0);
+            segment.ConstrainRope(distanceEdges, 0, ropeRadious, collisionLayer);
         else
-            segment.ConstrainRope(distanceMinMax.y-extraDistance, distanceMinMax.x);
+            segment.ConstrainRope(distanceMinMax.y-extraDistance, distanceMinMax.x, ropeRadious, collisionLayer);
         segment.CollisionCheck(ropeRadious,collisionLayer, groundFriction);
         if(z == maximumIterations/4-1)
             segment.ApplyForces(collisionLayer);
