@@ -4,33 +4,43 @@ using UnityEngine;
 
 public class RopeSim : MonoBehaviour
 {
+    [Header("End Points configuration")]
     public List<SegmentSim> currentSegments = new List<SegmentSim>();
     public Transform startingPoint; 
     public Vector3 startOffset;
     public Transform endingPoint;
     public Vector3 endingOffset;
 
-    public float ropeGravity = 4;
+    [Header("Rope simulation settings")]
     public int maximumIterations = 30;
-    public float currentLenght;
+    public int maxAmountOfPoints = 100;
+    public float ropeGravity = 4;
+    [Range(0,1)] public float ropeFlexibility = 0.97f;
+    [Range(0,1)] public float groundFriction = 0.3f;
+    [Range(0,1)] public float maxTension;
+    public float maxAcomulatedTension;
+    public Vector2 distanceMinMax = new Vector2(0,1);
+
+    [Header("Rope Configuration")]
     public float ropeLength = 5;
     [Range(0.05f, 1f)] public float ropeRadious = 0.2f;
-    public float ropeFlexibility;
-    public float groundFriction;
+    public bool canBreak;
     public LayerMask collisionLayer;
-    private LineRenderer lineRenderer;
-    public int maxAmountOfPoints = 100;
-    private float minmaxDistaneAccepted = 0.02f;
-    public float maxTension;
-    public float maxAcomulatedTension;
+
+    [Header("Rope Information")]
+    public float currentLenght;
     public float currentTension;
-    public Vector2 distanceMinMax = new Vector2(0,1);
+
+    [Header("Debug Options")]
     public int VisualizeIteration = -1;
     public bool overallDebug;
-    private float delay;
-    private bool justBroke;
-    public bool canBreak;
+
+    [Header("Components")]
     public RopeSim attachRope;
+    private LineRenderer lineRenderer;
+    private bool justBroke;
+    private float delay;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -104,8 +114,8 @@ public class RopeSim : MonoBehaviour
     }
     private void CreateNewSegments()
     {
-        if(distanceMinMax.y < minmaxDistaneAccepted)
-            distanceMinMax.y = minmaxDistaneAccepted;
+        if(distanceMinMax.y < 0.02f)
+            distanceMinMax.y = 0.02f;
         currentLenght = GetRopeLength();
         currentTension = currentLenght/ropeLength-1;
         int amountOfSegments = (int)(ropeLength/distanceMinMax.y)+1;
@@ -241,15 +251,18 @@ public class RopeSim : MonoBehaviour
     }
     private void SegmentSimulation(SegmentSim segment, int i, float extraDistance, float distanceEdges, int z, int segmentsCount)
     {
+        segment.CreateCorners(ropeRadious, collisionLayer);
         if(i == 0)
-            segment.ConstrainRope(distanceEdges, 0, ropeRadious, collisionLayer);
+            segment.ConstrainRope(distanceEdges, 0);
         else
-            segment.ConstrainRope(distanceMinMax.y-extraDistance, distanceMinMax.x, ropeRadious, collisionLayer);
+            segment.ConstrainRope(distanceMinMax.y-extraDistance, distanceMinMax.x);
         segment.CollisionCheck(ropeRadious,collisionLayer, groundFriction);
         if(z == maximumIterations/4-1)
+        {
             segment.ApplyForces(collisionLayer);
-        if(i==segmentsCount-1)
-            segment.endingPoint.ApplyForcesToRigidbodies(collisionLayer);
+            if(i==segmentsCount-1)        
+                segment.endingPoint.ApplyForcesToRigidbodies(collisionLayer);
+        }
         if(z == VisualizeIteration)
         {
             Debug.DrawLine(segment.startingPoint.getPosition(), segment.endingPoint.getPosition(), Color.yellow);

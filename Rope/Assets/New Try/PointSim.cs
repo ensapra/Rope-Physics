@@ -173,9 +173,15 @@ public class PointSim
         if(transform != null)
         {
             this.offset = offset;
-            this.position = transform.position+transform.TransformDirection(offset);
-            this.futurePosition = this.position;
+            ChangePosition(transform.position+transform.TransformDirection(offset));
         }
+    }
+    public void ChangePosition(Vector3 position)
+    {
+        this.position = position;
+        this.futurePosition = position;
+        if(Visualize)
+            Debug.DrawRay(position, Vector3.up*2, Color.magenta);
     }
     public void ConstrainFuture(Vector3 addition)
     {

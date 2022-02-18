@@ -35,65 +35,117 @@ public class SegmentSim
         else
             return false;
     }
-    public void ConstrainRope(float maximumDistance, float minimumDistance, float ropeRadious, LayerMask collisionLayer)
+    public void CreateCorners(float ropeRadious, LayerMask collisionLayer)
+    {
+        FindCorners(ropeRadious, collisionLayer);
+    }
+    public void ConstrainRope(float maximumDistance, float minimumDistance)
     {
         Vector3 starting = startingPoint.getPosition();
+        Vector3 startEnd = inbetweenPoints.Count > 0 ? inbetweenPoints[0].getPosition() : endingPoint.getPosition();
+
+        Vector3 endStart = inbetweenPoints.Count > 0 ? inbetweenPoints[inbetweenPoints.Count-1].getPosition() : startingPoint.getPosition();
         Vector3 ending = endingPoint.getPosition();
-        Vector3 forwardDirection = ending-starting;
-        float distance = Vector3.Distance(starting,ending);
-        FindCorners(ropeRadious, collisionLayer);
+        
+        Vector3 startDirection = startEnd-starting;
+        Vector3 endingDirection = endStart-ending;
+
+        float distance = Vector3.Distance(starting,startEnd);
+        for(int i = 0; i < inbetweenPoints.Count; i++)
+        {
+            starting = inbetweenPoints[i].getPosition();
+            startEnd = i+1 < inbetweenPoints.Count ? inbetweenPoints[i+1].getPosition() : endingPoint.getPosition();
+            distance += Vector3.Distance(starting,startEnd);
+        }
         if(distance > maximumDistance)
         {
-            startingPoint.ConstrainPosition((distance-maximumDistance)*(forwardDirection).normalized);  
-            endingPoint.ConstrainPosition(-(distance-maximumDistance)*(forwardDirection).normalized); 
+            startingPoint.ConstrainPosition((distance-maximumDistance)*(startDirection).normalized);  
+            endingPoint.ConstrainPosition((distance-maximumDistance)*(endingDirection).normalized); 
         }        
         if(distance < minimumDistance)
         {
-            startingPoint.ConstrainPosition((distance-minimumDistance)*(forwardDirection).normalized);  
-            endingPoint.ConstrainPosition(-(distance-minimumDistance)*(forwardDirection).normalized); 
+            startingPoint.ConstrainPosition((distance-minimumDistance)*(startDirection).normalized);  
+            endingPoint.ConstrainPosition((distance-minimumDistance)*(endingDirection).normalized); 
         }    
     }
     private void FindCorners(float ropeRadious, LayerMask collisionLayer)
     {
         PointSim startCheck = startingPoint;
         PointSim nextCheck = inbetweenPoints.Count != 0 ? inbetweenPoints[0] : endingPoint;
-        CheckCorner(startCheck, nextCheck, ropeRadious, collisionLayer);
+        PointSim initialPoint = CheckCorner(startCheck, nextCheck, ropeRadious, collisionLayer);
+        if(initialPoint != null)
+        {
+            if(inbetweenPoints.Count > 30)
+                return;
+            inbetweenPoints.Add(initialPoint);
+            return;
+        }
+        else 
+        {           
+            if(Vector3.Distance(startCheck.getPosition(), nextCheck.getPosition()) < 0.1f && inbetweenPoints.Count >0)
+            {
+                inbetweenPoints.RemoveAt(0);
+                return;
+            }
+        }
         for(int i = 0; i<inbetweenPoints.Count; i++)
         {
             startCheck = inbetweenPoints[i];
             nextCheck = i+1 < inbetweenPoints.Count ? inbetweenPoints[i+1] : endingPoint;
-            bool foundCorner = CheckCorner(startCheck, nextCheck, ropeRadious, collisionLayer);
-            if(foundCorner)
+            PointSim foundCorner = CheckCorner(startCheck, nextCheck, ropeRadious, collisionLayer);
+            if(foundCorner != null)
             {
-                FindCorners(ropeRadious, collisionLayer);
+                if(inbetweenPoints.Count > 30)
+                    return;
+                inbetweenPoints.Add(foundCorner);
                 break;
+            }
+            else
+            {
+                if(Vector3.Distance(startCheck.getPosition(), nextCheck.getPosition()) < 0.1f)
+                {
+                    inbetweenPoints.RemoveAt(i);
+                    break;
+                }
+                PointSim previousPoint = i == 0 ? startingPoint : inbetweenPoints[i-1];
+                PointSim cornerExists = CheckCorner(previousPoint, nextCheck, ropeRadious, collisionLayer);
+                if(cornerExists != null)
+                    inbetweenPoints[i].ChangePosition(cornerExists.getPosition());
+                else
+                {
+                    inbetweenPoints.RemoveAt(i);
+                    break;
+                }
             }
         }
     }
-    private bool CheckCorner(PointSim startingPoint, PointSim finalPoint, float ropeRadious, LayerMask collisionLayer)
+    private PointSim CheckCorner(PointSim startingPoint, PointSim finalPoint, float ropeRadious, LayerMask collisionLayer)
     {
-        RaycastHit hit;
+        RaycastHit startHit;
+        RaycastHit endHit;
         Vector3 startPosition = startingPoint.getPosition();
         Vector3 endingPosition = finalPoint.getPosition();
+        Debug.DrawLine(startPosition, endingPosition);
         Vector3 direction = (endingPosition-startPosition);
         if(direction.magnitude < 0.1f)
-            return false;
+            return null;
         Vector3 newCorner;
         Vector3 finalNormal = Vector3.zero;
-        if(Physics.Raycast(startPosition, direction, out hit, direction.magnitude, collisionLayer))
+        if(Physics.SphereCast(startPosition,ropeRadious, direction, out startHit, direction.magnitude, collisionLayer))
         {
-            Plane startPlane = new Plane(hit.normal, hit.point+hit.normal*ropeRadious);
-            finalNormal += hit.normal;
-            if(Physics.Raycast(endingPosition, -direction, out hit, direction.magnitude, collisionLayer))
+            Plane startPlane = new Plane(startHit.normal, startHit.point+startHit.normal*ropeRadious);
+            finalNormal += startHit.normal;
+            if(Physics.SphereCast(endingPosition,ropeRadious, -direction, out endHit, direction.magnitude, collisionLayer))
             {
-                finalNormal += hit.normal;
+                if(endHit.normal == startHit.normal)
+                    return null;
+                finalNormal += endHit.normal;
                 finalNormal /= 2;
-                newCorner = startPlane.ClosestPointOnPlane(hit.point+hit.normal*ropeRadious);
-                inbetweenPoints.Add(new PointSim(newCorner, false));
-                return true;
+                newCorner = startPlane.ClosestPointOnPlane(endHit.point+endHit.normal*ropeRadious);
+                return new PointSim(newCorner, false);
             }
         }
-        return false;
+        return null;
     }
     public void ConstrainRopeFuture(float maximumDistance, float minimumDistance)
     {
