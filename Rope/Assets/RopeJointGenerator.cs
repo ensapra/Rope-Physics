@@ -60,7 +60,7 @@ public class RopeJointGenerator : MonoBehaviour
             Collider collider = newNode.GetComponent<Collider>();
             collider.isTrigger = true;
             Rigidbody thisRB = newNode.GetComponent<Rigidbody>();
-            thisRB.isKinematic = true;
+            thisRB.constraints = RigidbodyConstraints.FreezeAll;
         }
         
         if(childReference != null)
@@ -171,23 +171,13 @@ public class RopeJointGenerator : MonoBehaviour
     }
     private void AddPoints(int amount)
     {
-/*         //Modify correctly initial segment
-        SegmentSim intialSegment;
+        //Modify correctly initial segment
         if(amount > maxAmountOfPoints)
             amount = maxAmountOfPoints;
-        intialSegment = currentSegments[0];
-        PointSim originalStartingPoint = intialSegment.startingPoint;
-        PointSim previousCopy = new PointSim(originalStartingPoint);
-        originalStartingPoint.RepurposeObject(new PointSim(originalStartingPoint.getPosition(), false));
         for(int i = 0; i < amount-1; i++)
         {
-            PointSim currentCopy = new PointSim(originalStartingPoint);
-            SegmentSim newStep = new SegmentSim(previousCopy, currentCopy);
-            previousCopy = currentCopy;
-            currentSegments.Insert(i,newStep);
+            GenerateNode(null, false);
         }
-        SegmentSim finalStep = new SegmentSim(previousCopy, originalStartingPoint);
-        currentSegments.Insert(amount-1, finalStep); */
     }
     private void UpdateStartAndEnd()
     {
